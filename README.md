@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# 🎮 Minipay Minigames
+ 
+A fast-paced mobile gaming platform featuring **15 reflex games**, real-time multiplayer, and competitive leaderboards. Built for speed, designed for competition.
+ 
+---
+ 
+## ✨ What You Get
+ 
+### 🎯 **15 Action-Packed Games**
+- **Quick Reflex** - Click Speed, Tap Target, Tap Sequence, Whack-a-Mole
+- **Reaction Games** - Reaction Time, Double Tap, Flick Challenge  
+- **Memory Games** - Pattern Match, Simon Says
+- **Precision Games** - Color Match, Precision Clicking
+- **Action Games** - Catch It, Dodge It
+- **Combo Games** - Combo Chain, Rhythm Game
+### 👥 **Real-Time Multiplayer**
+- Play Solo to beat your own record
+- Play Vs mode against AI opponents
+- Live score tracking
+- Competitive leaderboards
+### 🏆 **Global Leaderboards**
+- Overall rankings
+- Per-game leaderboards
+- Track player statistics
+- Persistent score storage
+### 📱 **Mobile Optimized**
+- Works on all devices (iPhone, Android, Web)
+- Touch-friendly controls
+- Fast loading times
+- Install as PWA app
+---
+ 
+## 🚀 Quick Start
