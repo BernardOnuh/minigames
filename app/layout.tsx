@@ -1,39 +1,30 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import './globals.css'
+import "./globals.css";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: 'Minipay Games',
-  description: 'Play multiplayer reflex games and compete with friends',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
-  themeColor: '#185FA5',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-  },
-}
+  title: "playarc - Play games. Earn rewards.",
+  description: "Play casual, competitive, or trivia games and earn ARC tokens.",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full antialiased">
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body className="bg-gray-950 text-white">
-        {children}
+      <body className="min-h-screen flex flex-col">
+        <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }
