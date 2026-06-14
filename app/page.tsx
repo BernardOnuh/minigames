@@ -645,7 +645,7 @@ export default function HomePage() {
         <nav className="w-full glass sticky top-0 z-40 border-b border-white/[0.07]">
           <div className="flex items-center justify-between px-4 sm:px-6 py-3.5">
             <span className="font-mono-arc text-sm font-bold tracking-widest uppercase">
-              play<span className="text-violet-400">arc</span>
+              mini<span className="text-violet-400">game</span>
             </span>
 
             <div className="flex items-center gap-2 sm:gap-3">
@@ -768,10 +768,9 @@ export default function HomePage() {
             <div>
               <p className="font-mono-arc text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                ARC PROTOCOL v2.4 — INITIALIZED
-              </p>
+                MINIGAME PROTOCOL v2.4 — INITIALIZED              </p>
               <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] tracking-tight mb-5">
-                Play games.<br />
+                Play mini games.<br />
                 <span className="text-violet-400">Earn rewards.</span><br />
                 <span className="text-cyan-400">Own your stats.</span>
               </h1>
