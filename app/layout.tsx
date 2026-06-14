@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "playarc - Play games. Earn rewards.",
-  description: "Play casual, competitive, or trivia games and earn ARC tokens.",
+  title: "playMINIGAMES - Play games. Earn rewards.",
+  description: "Play casual, competitive, or trivia games and earn SUSD tokens.",
 };
 
 export default function RootLayout({

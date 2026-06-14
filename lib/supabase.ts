@@ -1,0 +1,290 @@
+import { createClient } from "@supabase/supabase-js";
+
+// ─── Client ───────────────────────────────────────────────────────────────────
+// Add to your .env.local:
+//   NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+//   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+
+const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const supabase = createClient(supabaseUrl, supabaseAnon);
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface Game {
+  id: string;
+  title: string;
+  type: "arcade" | "multi" | "trivia";
+  icon: string;
+  reward: string;
+  players: string;          // computed client-side from match_players count
+  thumbBg: string;
+}
+
+export interface LeaderboardEntry {
+  name: string;
+  initials: string;
+  xp: string;
+  coins: string;
+  avatarColor: string;
+  avatarText: string;
+}
+
+export interface LiveMatch {
+  gameId: string;
+  gameTitle: string;
+  round: number;
+  playerCount: number;
+  pool: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  wallet: string;
+  username: string;
+  message: string;
+  createdAt: string;
+  isSystem?: boolean;
+}
+
+export interface UserStats {
+  xp: string;
+  earnings: string;
+  winRate: string;
+  xpPct: number;
+  earningsPct: number;
+  winPct: number;
+}
+
+// ─── Games ────────────────────────────────────────────────────────────────────
+
+export async function fetchGames(): Promise<Game[]> {
+  const { data, error } = await supabase
+    .from("games")
+    .select("id, title, type, icon, reward, thumb_bg")
+    .eq("is_active", true)
+    .order("created_at");
+
+  if (error || !data) {
+    console.warn("fetchGames:", error?.message);
+    return [];
+  }
+
+  // Count active players per game from live/waiting matches
+  const { data: playerCounts } = await supabase
+    .from("match_players")
+    .select("match_id, matches!inner(game_id, status)")
+    .in("matches.status", ["waiting", "live"]);
+
+  const countByGame: Record<string, number> = {};
+  (playerCounts ?? []).forEach((row: any) => {
+    const gid = row.matches?.game_id;
+    if (gid) countByGame[gid] = (countByGame[gid] ?? 0) + 1;
+  });
+
+  return data.map((g) => ({
+    id: g.id,
+    title: g.title,
+    type: g.type as Game["type"],
+    icon: g.icon,
+    reward: g.reward,
+    thumbBg: g.thumb_bg,
+    players:
+      countByGame[g.id] != null
+        ? `${countByGame[g.id]} playing`
+        : "0 playing",
+  }));
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+
+export async function fetchLeaderboard(limit = 5): Promise<LeaderboardEntry[]> {
+  const { data, error } = await supabase
+    .from("leaderboard_weekly")
+    .select("wallet, username, xp, earnings, avatar_color, avatar_text")
+    .limit(limit);
+
+  if (error || !data) {
+    console.warn("fetchLeaderboard:", error?.message);
+    return [];
+  }
+
+  return data.map((e) => ({
+    name: e.username || shortenWallet(e.wallet),
+    initials: (e.username || e.wallet).charAt(0).toUpperCase(),
+    xp: `${Number(e.xp).toLocaleString()} XP`,
+    coins: `${Number(e.earnings).toLocaleString()} USDm`,
+    avatarColor: e.avatar_color ?? "#a78bfa",
+    avatarText: e.avatar_text ?? "#000",
+  }));
+}
+
+// ─── Live match ───────────────────────────────────────────────────────────────
+
+export async function fetchLiveMatch(): Promise<LiveMatch | null> {
+  const { data, error } = await supabase
+    .from("matches")
+    .select("id, game_id, round, pool, status, games(title)")
+    .eq("status", "live")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const { count } = await supabase
+    .from("match_players")
+    .select("*", { count: "exact", head: true })
+    .eq("match_id", data.id);
+
+  return {
+    gameId: data.game_id,
+    gameTitle: (data.games as any)?.title ?? "Unknown",
+    round: data.round,
+    playerCount: count ?? 0,
+    pool: `${Number(data.pool).toFixed(0)} USDm`,
+  };
+}
+
+// ─── User profile & stats ─────────────────────────────────────────────────────
+
+export async function upsertUserProfile(wallet: string): Promise<void> {
+  const lower = wallet.toLowerCase();
+  const { error } = await supabase
+    .from("user_profiles")
+    .upsert({ wallet: lower, updated_at: new Date().toISOString() }, { onConflict: "wallet", ignoreDuplicates: true });
+
+  if (error) console.warn("upsertUserProfile:", error.message);
+}
+
+export async function fetchUserStats(wallet: string): Promise<UserStats> {
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("xp, earnings, wins, losses")
+    .eq("wallet", wallet.toLowerCase())
+    .maybeSingle();
+
+  if (error || !data) {
+    return { xp: "—", earnings: "— USDm", winRate: "—", xpPct: 0, earningsPct: 0, winPct: 0 };
+  }
+
+  const total = (data.wins ?? 0) + (data.losses ?? 0);
+  const winPct = total > 0 ? Math.round((data.wins / total) * 100) : 0;
+
+  return {
+    xp: Number(data.xp).toLocaleString(),
+    earnings: `${Number(data.earnings).toLocaleString()} USDm`,
+    winRate: total > 0 ? `${winPct}%` : "—",
+    xpPct: Math.min(100, Math.round((data.xp / 20_000) * 100)),
+    earningsPct: Math.min(100, Math.round((Number(data.earnings) / 200) * 100)),
+    winPct,
+  };
+}
+
+// ─── Lobby chat ───────────────────────────────────────────────────────────────
+
+export async function fetchChatHistory(limit = 30): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("lobby_chat")
+    .select("id, wallet, username, message, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    console.warn("fetchChatHistory:", error?.message);
+    return [];
+  }
+
+  return data
+    .reverse()
+    .map((m) => ({
+      id: m.id,
+      wallet: m.wallet,
+      username: m.username || shortenWallet(m.wallet),
+      message: m.message,
+      createdAt: m.created_at,
+    }));
+}
+
+export async function sendChatMessage(
+  wallet: string,
+  message: string,
+  username?: string
+): Promise<boolean> {
+  const { error } = await supabase.from("lobby_chat").insert({
+    wallet: wallet.toLowerCase(),
+    username: username || shortenWallet(wallet),
+    message: message.trim().slice(0, 280),
+  });
+
+  if (error) {
+    console.warn("sendChatMessage:", error.message);
+    return false;
+  }
+  return true;
+}
+
+// Subscribe to new chat messages in real-time.
+// Returns an unsubscribe function — call it in useEffect cleanup.
+export function subscribeLobbyChat(
+  onMessage: (msg: ChatMessage) => void
+): () => void {
+  const channel = supabase
+    .channel("lobby-chat")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "lobby_chat" },
+      (payload) => {
+        const r = payload.new as any;
+        onMessage({
+          id: r.id,
+          wallet: r.wallet,
+          username: r.username || shortenWallet(r.wallet),
+          message: r.message,
+          createdAt: r.created_at,
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// Subscribe to live match updates (status changes)
+export function subscribeLiveMatches(
+  onUpdate: () => void
+): () => void {
+  const channel = supabase
+    .channel("live-matches")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "matches" },
+      onUpdate
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// ─── Player count ─────────────────────────────────────────────────────────────
+
+export async function fetchPlayerCount(): Promise<string> {
+  const { count, error } = await supabase
+    .from("match_players")
+    .select("*", { count: "exact", head: true });
+
+  if (error) return "—";
+  return (count ?? 0).toLocaleString();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+export function shortenWallet(address: string): string {
+  if (!address || address.length < 10) return address;
+  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}

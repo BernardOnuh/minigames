@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useRouter } from "next/navigation"; // For Next.js 13+
+import { ethers } from "ethers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -9,6 +11,7 @@ type GameType = "all" | "arcade" | "multi" | "trivia";
 type ConnectStep = "idle" | "connecting" | "success";
 
 interface Game {
+  id: string;
   title: string;
   type: Exclude<GameType, "all">;
   icon: string;
@@ -26,41 +29,169 @@ interface LeaderboardEntry {
   avatarText: string;
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+interface HudStat {
+  label: string;
+  val: string;
+  color: string;
+  pct: number;
+}
 
-const GAMES: Game[] = [
-  { title: "Block blast",  type: "arcade", icon: "🧩", reward: "5 ARC / game",    players: "1,200 playing", thumbBg: "linear-gradient(135deg,#100c2e,#1e1557)" },
-  { title: "Speed type",   type: "arcade", icon: "⌨️",  reward: "3 ARC / game",    players: "890 playing",   thumbBg: "linear-gradient(135deg,#0a1828,#102040)" },
-  { title: "Stack run",    type: "arcade", icon: "📦", reward: "4 ARC / game",    players: "640 playing",   thumbBg: "linear-gradient(135deg,#18100a,#2e1e08)" },
-  { title: "Arena clash",  type: "multi",  icon: "⚔️",  reward: "20 ARC / win",    players: "3,400 playing", thumbBg: "linear-gradient(135deg,#071a10,#0d2e1a)" },
-  { title: "Tower siege",  type: "multi",  icon: "🏰", reward: "15 ARC / win",    players: "2,100 playing", thumbBg: "linear-gradient(135deg,#100c2e,#1c1448)" },
-  { title: "Race kings",   type: "multi",  icon: "🚗", reward: "10 ARC / win",    players: "980 playing",   thumbBg: "linear-gradient(135deg,#1a0808,#2e1010)" },
-  { title: "Crypto quiz",  type: "trivia", icon: "🪙", reward: "8 ARC / correct", players: "560 playing",   thumbBg: "linear-gradient(135deg,#18140a,#2e2408)" },
-  { title: "World trivia", type: "trivia", icon: "🌍", reward: "6 ARC / correct", players: "720 playing",   thumbBg: "linear-gradient(135deg,#071812,#0d2818)" },
-  { title: "Speed facts",  type: "trivia", icon: "⚡", reward: "5 ARC / correct", players: "430 playing",   thumbBg: "linear-gradient(135deg,#0a1828,#10203c)" },
-];
+// ─── Network Configuration ────────────────────────────────────────────────────
 
-const LEADERBOARD: LeaderboardEntry[] = [
-  { name: "0xSam",     initials: "S", xp: "14,800 XP", coins: "920 ARC",  avatarColor: "rgba(251,191,36,0.12)",  avatarText: "#fbbf24" },
-  { name: "CryptoAde", initials: "A", xp: "13,200 XP", coins: "840 ARC",  avatarColor: "rgba(167,139,250,0.12)", avatarText: "#a78bfa" },
-  { name: "PlayrKemi", initials: "K", xp: "11,700 XP", coins: "710 ARC",  avatarColor: "rgba(56,189,248,0.12)",  avatarText: "#38bdf8" },
-  { name: "0xTunde",   initials: "T", xp: "10,400 XP", coins: "680 ARC",  avatarColor: "rgba(74,222,128,0.12)",  avatarText: "#4ade80" },
-  { name: "GamerFola", initials: "F", xp: "9,900 XP",  coins: "590 ARC",  avatarColor: "rgba(244,114,182,0.12)", avatarText: "#f472b6" },
-];
-
-const TAG_STYLES: Record<Exclude<GameType, "all">, string> = {
-  arcade: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  multi:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  trivia: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+const NETWORK_CONFIG = {
+  isMainnet: true,
+  chainId: 1,
+  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "https://eth-mainnet.g.alchemy.com/v2/demo",
+  blockExplorer: "https://etherscan.io",
+  displayName: "ETHEREUM MAINNET",
+  usdmTokenAddress: process.env.NEXT_PUBLIC_USDM_TOKEN_ADDRESS || "0x...",
+  gameContractAddress: process.env.NEXT_PUBLIC_GAME_CONTRACT_ADDRESS || "0x...",
+  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.minigame.com",
 };
 
-const TAG_LABELS: Record<Exclude<GameType, "all">, string> = {
-  arcade: "Arcade",
-  multi:  "Multiplayer",
-  trivia: "Trivia",
-};
+// ─── API Services ─────────────────────────────────────────────────────────────
 
-const RANK_COLORS = ["#fbbf24", "#94a3b8", "#c4704f", "#64748b", "#64748b"];
+async function fetchUSDmPrice(): Promise<string> {
+  try {
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=true-usd&vs_currencies=usd"
+    );
+    const data = await response.json();
+    return data["true-usd"]?.usd?.toFixed(4) || "$1.00";
+  } catch (error) {
+    console.warn("Failed to fetch USDm price:", error);
+    return "$1.00";
+  }
+}
+
+async function fetchBlockNumber(): Promise<string> {
+  try {
+    const provider = new ethers.JsonRpcProvider(NETWORK_CONFIG.rpcUrl);
+    const blockNumber = await provider.getBlockNumber();
+    return `#${blockNumber.toLocaleString()}`;
+  } catch (error) {
+    console.warn("Failed to fetch block number:", error);
+    return "#N/A";
+  }
+}
+
+async function fetchGames(): Promise<Game[]> {
+  try {
+    const response = await fetch(`${NETWORK_CONFIG.backendUrl}/api/games`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch games");
+    
+    const games = await response.json();
+    return games.map((game: any) => ({
+      id: game.id,
+      title: game.title,
+      type: game.type,
+      icon: game.icon,
+      reward: game.reward,
+      players: game.activePlayers?.toString() || "0 playing",
+      thumbBg: game.thumbBg || "linear-gradient(135deg,#100c2e,#1e1557)",
+    }));
+  } catch (error) {
+    console.warn("Failed to fetch games:", error);
+    return [];
+  }
+}
+
+async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
+  try {
+    const response = await fetch(
+      `${NETWORK_CONFIG.backendUrl}/api/leaderboard?limit=5&period=weekly`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch leaderboard");
+
+    const entries = await response.json();
+    return entries.map((entry: any) => ({
+      name: entry.username,
+      initials: entry.username.charAt(0).toUpperCase(),
+      xp: `${entry.xp.toLocaleString()} XP`,
+      coins: `${entry.earnings.toLocaleString()} USDm`,
+      avatarColor: entry.avatarColor,
+      avatarText: entry.avatarTextColor,
+    }));
+  } catch (error) {
+    console.warn("Failed to fetch leaderboard:", error);
+    return [];
+  }
+}
+
+async function fetchUserStats(walletAddress: string): Promise<{
+  xp: string;
+  earnings: string;
+  winRate: string;
+}> {
+  try {
+    const response = await fetch(
+      `${NETWORK_CONFIG.backendUrl}/api/users/${walletAddress}/stats`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch user stats");
+
+    const stats = await response.json();
+    return {
+      xp: stats.xp.toLocaleString(),
+      earnings: `${stats.earnings.toLocaleString()} USDm`,
+      winRate: `${Math.round(stats.wins / (stats.wins + stats.losses) * 100)}%`,
+    };
+  } catch (error) {
+    console.warn("Failed to fetch user stats:", error);
+    return { xp: "—", earnings: "— USDm", winRate: "—" };
+  }
+}
+
+async function fetchPlayerCount(): Promise<string> {
+  try {
+    const response = await fetch(`${NETWORK_CONFIG.backendUrl}/api/stats/players`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch player count");
+
+    const data = await response.json();
+    return data.active.toLocaleString();
+  } catch (error) {
+    console.warn("Failed to fetch player count:", error);
+    return "—";
+  }
+}
+
+async function fetchTotalDistributed(): Promise<string> {
+  try {
+    const response = await fetch(
+      `${NETWORK_CONFIG.backendUrl}/api/stats/total-distributed`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to fetch total distributed");
+
+    const data = await response.json();
+    const totalInK = (data.total / 1000).toFixed(0);
+    return `${totalInK}K`;
+  } catch (error) {
+    console.warn("Failed to fetch total distributed:", error);
+    return "—";
+  }
+}
 
 // ─── useMiniPay Hook ──────────────────────────────────────────────────────────
 
@@ -69,7 +200,6 @@ function useMiniPay() {
   const { authenticated, login } = usePrivy();
   const { wallets } = useWallets();
 
-  // Detect MiniPay's injected provider on mount
   useEffect(() => {
     const provider = (window as any).ethereum;
     if (provider?.isMiniPay) {
@@ -77,14 +207,12 @@ function useMiniPay() {
     }
   }, []);
 
-  // Auto-login via Privy when running inside MiniPay
   useEffect(() => {
     if (isMiniPay && !authenticated) {
       login();
     }
   }, [isMiniPay, authenticated, login]);
 
-  // Find the wallet Privy picked up from MiniPay's injected provider
   const miniPayWallet = isMiniPay
     ? wallets.find((w) => w.walletClientType !== "privy")
     : undefined;
@@ -282,7 +410,7 @@ function ConnectModal({
             </div>
             <p className="font-mono-arc text-sm font-bold text-gray-100 mb-1">Wallet connected!</p>
             <p className="font-mono-arc text-[11px] text-gray-500 mb-4 leading-relaxed">
-              Your embedded wallet is ready.<br />Start earning ARC tokens.
+              Your embedded wallet is ready.<br />Start earning USDm tokens.
             </p>
             {shortAddress && (
               <span
@@ -316,12 +444,14 @@ function WalletDropdown({
   shortAddress,
   walletTypeLabel,
   isMiniPay,
+  userStats,
   onLogout,
   onClose,
 }: {
   shortAddress: string;
   walletTypeLabel: string | null;
   isMiniPay: boolean;
+  userStats: { xp: string; earnings: string; winRate: string } | null;
   onLogout: () => void;
   onClose: () => void;
 }) {
@@ -354,7 +484,6 @@ function WalletDropdown({
         }}
       />
       <div className="p-4">
-        {/* Address + type */}
         <div
           className="flex items-center gap-2 mb-4 px-2 py-1.5 rounded-lg"
           style={{
@@ -371,41 +500,29 @@ function WalletDropdown({
               {shortAddress}
             </p>
             <p className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider">
-              {isMiniPay ? "MINIPAY" : walletTypeLabel}
+              {isMiniPay ? "MAINNET" : walletTypeLabel}
             </p>
           </div>
         </div>
 
-        {/* MiniPay badge */}
-        {isMiniPay && (
-          <div
-            className="flex items-center gap-2 mb-4 px-2 py-1.5 rounded-lg"
-            style={{ background: "rgba(56,189,248,0.06)", border: "0.5px solid rgba(56,189,248,0.15)" }}
-          >
-            <span className="text-sm">⬡</span>
-            <p className="font-mono-arc text-[10px] text-cyan-400 uppercase tracking-wider">
-              Connected via MiniPay
-            </p>
+        {userStats && (
+          <div className="grid grid-cols-3 gap-1.5 mb-4">
+            {[
+              { val: userStats.xp, label: "XP",  color: "#a78bfa" },
+              { val: userStats.earnings, label: "USDm", color: "#38bdf8" },
+              { val: userStats.winRate, label: "Win", color: "#4ade80" },
+            ].map(({ val, label, color }) => (
+              <div
+                key={label}
+                className="text-center rounded-lg py-2"
+                style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}
+              >
+                <p className="font-mono-arc text-xs font-bold" style={{ color }}>{val}</p>
+                <p className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider mt-0.5">{label}</p>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* Quick stats */}
-        <div className="grid grid-cols-3 gap-1.5 mb-4">
-          {[
-            { val: "4,820", label: "XP",  color: "#a78bfa" },
-            { val: "312",   label: "ARC", color: "#fbbf24" },
-            { val: "63%",   label: "Win", color: "#4ade80" },
-          ].map(({ val, label, color }) => (
-            <div
-              key={label}
-              className="text-center rounded-lg py-2"
-              style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}
-            >
-              <p className="font-mono-arc text-xs font-bold" style={{ color }}>{val}</p>
-              <p className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
 
         <div style={{ height: "0.5px", background: "rgba(255,255,255,0.06)", marginBottom: "0.5rem" }} />
 
@@ -418,7 +535,6 @@ function WalletDropdown({
 
         <div style={{ height: "0.5px", background: "rgba(255,255,255,0.06)", margin: "0.5rem 0" }} />
 
-        {/* Hide disconnect inside MiniPay — user can't really disconnect */}
         {!isMiniPay && (
           <button
             onClick={() => { onLogout(); onClose(); }}
@@ -432,9 +548,21 @@ function WalletDropdown({
   );
 }
 
-// ─── Components ───────────────────────────────────────────────────────────────
+// ─── GameCard ─────────────────────────────────────────────────────────────────
 
 function GameCard({ game }: { game: Game }) {
+  const TAG_STYLES: Record<Exclude<GameType, "all">, string> = {
+    arcade: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+    multi:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    trivia: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  };
+
+  const TAG_LABELS: Record<Exclude<GameType, "all">, string> = {
+    arcade: "Arcade",
+    multi:  "Multiplayer",
+    trivia: "Trivia",
+  };
+
   return (
     <div className="group flex flex-col glass-card cursor-pointer border-white/[0.06] hover:border-violet-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
       <div
@@ -457,7 +585,11 @@ function GameCard({ game }: { game: Game }) {
   );
 }
 
+// ─── LeaderboardRow ───────────────────────────────────────────────────────────
+
 function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
+  const RANK_COLORS = ["#fbbf24", "#94a3b8", "#c4704f", "#64748b", "#64748b"];
+
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] px-2 -mx-2 transition-colors">
       <span className="font-mono-arc text-xs w-5 flex-shrink-0 font-bold" style={{ color: RANK_COLORS[rank] }}>
@@ -476,14 +608,7 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
   );
 }
 
-// ─── HUD Panel ────────────────────────────────────────────────────────────────
-
-interface HudStat {
-  label: string;
-  val: string;
-  color: string;
-  pct: number;
-}
+// ─── HudPanel ─────────────────────────────────────────────────────────────────
 
 function HudPanel({
   authenticated,
@@ -491,6 +616,7 @@ function HudPanel({
   embeddedWalletAddress,
   isMiniPay,
   miniPayAddress,
+  userStats,
   onConnect,
 }: {
   authenticated: boolean;
@@ -498,6 +624,7 @@ function HudPanel({
   embeddedWalletAddress: string | null;
   isMiniPay: boolean;
   miniPayAddress: string | null;
+  userStats: { xp: string; earnings: string; winRate: string } | null;
   onConnect: () => void;
 }) {
   const rawAddress = isMiniPay
@@ -507,16 +634,20 @@ function HudPanel({
     ? `${rawAddress.slice(0, 6)}…${rawAddress.slice(-4)}`
     : null;
 
+  const xpValue = userStats?.xp || "—";
+  const earningsValue = userStats?.earnings || "— USDm";
+  const winRateValue = userStats?.winRate || "—";
+
   const stats: HudStat[] = authenticated
     ? [
-        { label: "Your XP",     val: "4,820",  color: "#a78bfa", pct: 62 },
-        { label: "ARC balance", val: "312 ARC", color: "#38bdf8", pct: 34 },
-        { label: "Win rate",    val: "63%",     color: "#4ade80", pct: 63 },
+        { label: "Your XP",      val: xpValue,       color: "#a78bfa", pct: 62 },
+        { label: "USDm balance", val: earningsValue, color: "#38bdf8", pct: 34 },
+        { label: "Win rate",     val: winRateValue,  color: "#4ade80", pct: 63 },
       ]
     : [
-        { label: "Your XP",     val: "—", color: "#374151", pct: 0 },
-        { label: "ARC balance", val: "—", color: "#374151", pct: 0 },
-        { label: "Win rate",    val: "—", color: "#374151", pct: 0 },
+        { label: "Your XP",      val: "—", color: "#374151", pct: 0 },
+        { label: "USDm balance", val: "—", color: "#374151", pct: 0 },
+        { label: "Win rate",     val: "—", color: "#374151", pct: 0 },
       ];
 
   return (
@@ -547,7 +678,7 @@ function HudPanel({
                 className="font-mono-arc text-[9px] text-cyan-400 mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded"
                 style={{ background: "rgba(56,189,248,0.08)", border: "0.5px solid rgba(56,189,248,0.2)" }}
               >
-                ⬡ MiniPay
+                ⬡ Mainnet
               </span>
             )}
           </div>
@@ -568,24 +699,31 @@ function HudPanel({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [filter, setFilter]           = useState<GameType>("all");
+  const router = useRouter(); // Next.js router for navigation
+  const [filter, setFilter] = useState<GameType>("all");
   const [connectStep, setConnectStep] = useState<ConnectStep>("idle");
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // ── Privy ──────────────────────────────────────────────────────────────────
+  const [games, setGames] = useState<Game[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [usdmPrice, setUsdmPrice] = useState<string>("$1.00");
+  const [blockNumber, setBlockNumber] = useState<string>("#N/A");
+  const [playerCount, setPlayerCount] = useState<string>("—");
+  const [totalDistributed, setTotalDistributed] = useState<string>("—");
+  const [userStats, setUserStats] = useState<{ xp: string; earnings: string; winRate: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
 
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const externalWallet = wallets.find((w) => w.walletClientType !== "privy");
 
-  // ── MiniPay ────────────────────────────────────────────────────────────────
   const { isMiniPay, address: miniPayAddress, shortAddress: miniPayShort } = useMiniPay();
 
-  // ── Active address — MiniPay wins if detected ──────────────────────────────
   const activeAddress = isMiniPay
     ? miniPayAddress
     : embeddedWallet?.address ?? externalWallet?.address ?? user?.wallet?.address ?? null;
@@ -595,14 +733,52 @@ export default function HomePage() {
     : null;
 
   const walletTypeLabel = isMiniPay
-    ? "MINIPAY"
+    ? "MAINNET"
     : embeddedWallet
     ? "EMBEDDED"
     : externalWallet
     ? "EXTERNAL"
     : null;
 
-  // ── Connect flow ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [gamesData, leaderboardData, price, block, players, distributed] = await Promise.all([
+          fetchGames(),
+          fetchLeaderboard(),
+          fetchUSDmPrice(),
+          fetchBlockNumber(),
+          fetchPlayerCount(),
+          fetchTotalDistributed(),
+        ]);
+
+        setGames(gamesData);
+        setLeaderboard(leaderboardData);
+        setUsdmPrice(price);
+        setBlockNumber(block);
+        setPlayerCount(players);
+        setTotalDistributed(distributed);
+
+        if (authenticated && activeAddress) {
+          const stats = await fetchUserStats(activeAddress);
+          setUserStats(stats);
+        } else {
+          setUserStats(null);
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [authenticated, activeAddress]);
+
   useEffect(() => {
     if (authenticated && connectStep === "connecting") {
       setConnectStep("success");
@@ -610,7 +786,6 @@ export default function HomePage() {
   }, [authenticated, connectStep]);
 
   const handleConnect = useCallback(async () => {
-    // Inside MiniPay, Privy auto-logins — nothing to do
     if (isMiniPay) return;
     setConnectStep("connecting");
     try {
@@ -622,9 +797,12 @@ export default function HomePage() {
 
   const handleModalClose = useCallback(() => setConnectStep("idle"), []);
 
-  const filteredGames =
-    filter === "all" ? GAMES : GAMES.filter((g) => g.type === filter);
+  // ✅ NEW: Navigate to lobby page
+  const handleGoToLobby = useCallback(() => {
+    router.push("/lobby");
+  }, [router]);
 
+  const filteredGames = filter === "all" ? games : games.filter((g) => g.type === filter);
   const showModal = !isMiniPay && (connectStep === "connecting" || connectStep === "success");
 
   return (
@@ -640,8 +818,6 @@ export default function HomePage() {
       )}
 
       <div className="relative z-10">
-
-        {/* ── Nav ─────────────────────────────────────────────────────────── */}
         <nav className="w-full glass sticky top-0 z-40 border-b border-white/[0.07]">
           <div className="flex items-center justify-between px-4 sm:px-6 py-3.5">
             <span className="font-mono-arc text-sm font-bold tracking-widest uppercase">
@@ -649,11 +825,13 @@ export default function HomePage() {
             </span>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="hidden sm:inline font-mono-arc text-[10px] px-3 py-2 glass-sm rounded-sm text-gray-400 hover:text-gray-100 uppercase tracking-wider transition-all">
+              <button 
+                onClick={handleGoToLobby}
+                className="hidden sm:inline font-mono-arc text-[10px] px-3 py-2 glass-sm rounded-sm text-gray-400 hover:text-gray-100 uppercase tracking-wider transition-all"
+              >
                 Leaderboard
               </button>
 
-              {/* MiniPay: always show connected pill, no connect button needed */}
               {isMiniPay ? (
                 <div className="relative">
                   <button
@@ -669,7 +847,7 @@ export default function HomePage() {
                       style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }}
                     />
                     <span className="font-mono-arc text-[10px] text-cyan-300 tracking-wider hidden sm:inline">
-                      {miniPayShort ?? shortAddress ?? "MiniPay"}
+                      {miniPayShort ?? shortAddress ?? "Mainnet"}
                     </span>
                     <span className="font-mono-arc text-[9px] text-cyan-400 tracking-wider">⬡</span>
                     <span className="font-mono-arc text-[10px] text-cyan-400/50">▾</span>
@@ -680,6 +858,7 @@ export default function HomePage() {
                       shortAddress={shortAddress}
                       walletTypeLabel={walletTypeLabel}
                       isMiniPay={isMiniPay}
+                      userStats={userStats}
                       onLogout={logout}
                       onClose={() => setShowDropdown(false)}
                     />
@@ -688,7 +867,7 @@ export default function HomePage() {
               ) : !ready ? (
                 <div className="w-24 h-7 rounded-sm bg-white/[0.05] animate-pulse" />
               ) : authenticated ? (
-                <div className="relative flex items-center gap-2 sm:gap-3">
+                <div className="relative">
                   <button
                     onClick={() => setShowDropdown((v) => !v)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all hover:border-violet-400/40"
@@ -714,6 +893,7 @@ export default function HomePage() {
                       shortAddress={shortAddress}
                       walletTypeLabel={walletTypeLabel}
                       isMiniPay={false}
+                      userStats={userStats}
                       onLogout={logout}
                       onClose={() => setShowDropdown(false)}
                     />
@@ -732,28 +912,27 @@ export default function HomePage() {
           </div>
         </nav>
 
-        {/* ── Status bar ──────────────────────────────────────────────────── */}
         <div className="flex items-center gap-5 px-4 sm:px-6 py-2 border-b border-white/[0.04] bg-black/30 backdrop-blur-sm overflow-x-auto">
           <span className="font-mono-arc text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
             <span
               className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"
               style={{ boxShadow: "0 0 5px #4ade80" }}
             />
-            NETWORK: <span className="text-violet-400">{isMiniPay ? "CELO" : "MAINNET"}</span>
+            NETWORK: <span className="text-violet-400">{NETWORK_CONFIG.displayName}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            PLAYERS: <span className="text-violet-400">12,400</span>
+            PLAYERS: <span className="text-violet-400">{playerCount}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            ARC: <span className="text-violet-400">$0.0714</span>
+            USDm: <span className="text-violet-400">{usdmPrice}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            BLOCK: <span className="text-violet-400">#19,204,811</span>
+            BLOCK: <span className="text-violet-400">{blockNumber}</span>
           </span>
 
           {(authenticated || isMiniPay) && walletTypeLabel && (
             <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap hidden sm:inline">
-              WALLET: <span className={isMiniPay ? "text-cyan-400" : "text-cyan-400"}>{walletTypeLabel}</span>
+              WALLET: <span className="text-cyan-400">{walletTypeLabel}</span>
             </span>
           )}
 
@@ -762,13 +941,12 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* ── Hero ────────────────────────────────────────────────────────── */}
         <section className="w-full px-4 sm:px-6 py-14 sm:py-20">
           <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-10 items-start">
             <div>
               <p className="font-mono-arc text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                MINIGAME PROTOCOL v2.4 — INITIALIZED              </p>
+                MINIGAME PROTOCOL v2.4 — MAINNET INITIALIZED              </p>
               <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] tracking-tight mb-5">
                 Play mini games.<br />
                 <span className="text-violet-400">Earn rewards.</span><br />
@@ -776,12 +954,15 @@ export default function HomePage() {
               </h1>
               <p className="text-sm text-gray-500 leading-relaxed mb-7 max-w-md">
                 {isMiniPay
-                  ? "You're connected via MiniPay on Celo. Play mini games and earn ARC tokens on every win."
-                  : "Log in with Privy — your wallet is created instantly. Play casual, competitive, or trivia games and earn ARC tokens on every win."}
+                  ? "You're connected to Ethereum Mainnet. Play mini games and earn USDm tokens on every win."
+                  : "Log in with Privy — your wallet is created instantly. Play casual, competitive, or trivia games and earn USDm tokens on every win."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 {authenticated || isMiniPay ? (
-                  <button className="font-mono-arc text-xs px-7 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 transition-all uppercase tracking-wider">
+                  <button 
+                    onClick={handleGoToLobby}
+                    className="font-mono-arc text-xs px-7 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 transition-all uppercase tracking-wider"
+                  >
                     Go to lobby →
                   </button>
                 ) : (
@@ -792,7 +973,10 @@ export default function HomePage() {
                     [ Get started — it&apos;s free ]
                   </button>
                 )}
-                <button className="font-mono-arc text-xs px-7 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider">
+                <button 
+                  onClick={handleGoToLobby}
+                  className="font-mono-arc text-xs px-7 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider"
+                >
                   Browse games
                 </button>
               </div>
@@ -804,19 +988,19 @@ export default function HomePage() {
               embeddedWalletAddress={embeddedWallet?.address ?? null}
               isMiniPay={isMiniPay}
               miniPayAddress={miniPayAddress}
+              userStats={userStats}
               onConnect={handleConnect}
             />
           </div>
         </section>
 
-        {/* ── Stats strip ─────────────────────────────────────────────────── */}
         <div className="border-y border-white/[0.05] bg-black/20 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4">
             {[
-              { num: "12,400", label: "Players online",  color: "#a78bfa" },
-              { num: "9",      label: "Games available", color: "#38bdf8" },
-              { num: "840K",   label: "ARC tokens paid", color: "#e2e8f0" },
-              { num: "Free",   label: "To join",         color: "#4ade80" },
+              { num: playerCount, label: "Players online",     color: "#a78bfa" },
+              { num: `${games.length}`, label: "Games available",    color: "#38bdf8" },
+              { num: totalDistributed, label: "USDm tokens paid",   color: "#e2e8f0" },
+              { num: "Free", label: "To join",            color: "#4ade80" },
             ].map((s, i) => (
               <div
                 key={s.label}
@@ -829,14 +1013,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* ── Mini Games Lobby ─────────────────────────────────────────────── */}
         <section className="w-full px-4 sm:px-6 py-10">
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Mini Games</span>
                 <span className="flex-1 h-px bg-white/[0.05]" />
-                <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm">9 active</span>
+                <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm">
+                  {games.length} active
+                </span>
               </div>
               <div className="flex gap-2">
                 {(["all", "arcade", "multi", "trivia"] as GameType[]).map((f) => (
@@ -849,21 +1034,28 @@ export default function HomePage() {
                         : "glass-sm text-gray-500 hover:text-gray-200"
                     }`}
                   >
-                    {f === "all" ? "All" : TAG_LABELS[f]}
+                    {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {filteredGames.map((game) => (
-                <GameCard key={game.title} game={game} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-40 bg-white/[0.05] rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {filteredGames.map((game) => (
+                  <GameCard key={game.id} game={game} />
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
-        {/* ── Leaderboard ─────────────────────────────────────────────────── */}
         <section className="w-full px-4 sm:px-6 py-8 border-t border-white/[0.05]">
           <div className="max-w-5xl mx-auto">
             <div className="glass-card p-5 sm:p-6 border-pink-500/10 relative overflow-hidden">
@@ -873,13 +1065,22 @@ export default function HomePage() {
                 <span className="flex-1 h-px bg-white/[0.04]" />
                 <span className="font-mono-arc text-[9px] text-pink-400 border border-pink-500/25 px-2 py-0.5 rounded-sm">Weekly</span>
               </div>
-              {LEADERBOARD.map((entry, i) => (
-                <LeaderboardRow key={entry.name} entry={entry} rank={i} />
-              ))}
+              {loading ? (
+                <div className="space-y-2">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-8 bg-white/[0.05] rounded animate-pulse" />
+                  ))}
+                </div>
+              ) : leaderboard.length > 0 ? (
+                leaderboard.map((entry, i) => (
+                  <LeaderboardRow key={entry.name} entry={entry} rank={i} />
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-4">No leaderboard data available</p>
+              )}
             </div>
           </div>
         </section>
-
       </div>
     </main>
   );
