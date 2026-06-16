@@ -5,6 +5,9 @@ import Providers from "./providers";
 export const metadata: Metadata = {
   title: "playMINIGAMES - Play games. Earn rewards.",
   description: "Play casual, competitive, or trivia games and earn SUSD tokens.",
+  other: {
+    "talentapp:project_verification": "1e99f5463ca9a74e8f4f74dbabf065fa38277a447104048c68fb329132bb83a11c8c38d146ccc776847008dddd49c54633cc07ad11fe6c393641794a2e9d35e0",
+  },
 };
 
 export default function RootLayout({
