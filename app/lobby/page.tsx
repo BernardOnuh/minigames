@@ -167,7 +167,7 @@ function LiveMatchBanner({ match, onJoin }: { match: LiveMatch; onJoin: (id: str
 
 // ─── GameCard ──────────────────────────────────────────────────────────────────
 
-function GameCard({ game, onPlay }: { game: Game; onPlay: (id: string) => void }) {
+function GameCard({ game, onPlay }: { game: Game; onPlay: (gameId: string) => void }) {
   const TAG_STYLES: Record<Game["type"], string> = {
     arcade: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
     multi:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
@@ -181,7 +181,7 @@ function GameCard({ game, onPlay }: { game: Game; onPlay: (id: string) => void }
     <div
       className="group flex flex-col cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
       style={{ background: "rgba(255,255,255,0.02)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: "10px" }}
-      onClick={() => onPlay(game.id)}
+      onClick={() => onPlay(game.gameId)}
     >
       <div className="h-16 flex items-center justify-center text-2xl flex-shrink-0" style={{ background: game.thumbBg }}>
         <span role="img" aria-label={game.title}>{game.icon}</span>
@@ -243,7 +243,7 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
   );
 }
 
-// ─── LobbyChat — realtime via Supabase ────────────────────────────────────────
+// ─── LobbyChat ────────────────────────────────────────────────────────────────
 
 function LobbyChat({
   messages,
@@ -356,17 +356,14 @@ export default function LobbyPage() {
 
   const shortAddress = activeAddress ? shortenWallet(activeAddress) : null;
 
-  // Redirect unauthenticated users back home
   useEffect(() => {
     if (ready && !authenticated && !isMiniPay) router.replace("/");
   }, [ready, authenticated, isMiniPay, router]);
 
-  // Upsert profile row when wallet is known
   useEffect(() => {
     if (activeAddress) upsertUserProfile(activeAddress);
   }, [activeAddress]);
 
-  // Initial data load
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -397,10 +394,8 @@ export default function LobbyPage() {
     load();
   }, [activeAddress]);
 
-  // ── Realtime: lobby chat ──────────────────────────────────────────────────
   useEffect(() => {
     const unsub = subscribeLobbyChat((msg) => {
-      // Don't duplicate our own optimistic message
       setChatMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
         return [...prev, msg];
@@ -409,19 +404,16 @@ export default function LobbyPage() {
     return unsub;
   }, []);
 
-  // ── Realtime: live match updates ──────────────────────────────────────────
   useEffect(() => {
     const unsub = subscribeLiveMatches(async () => {
       const live = await fetchLiveMatch();
       setLiveMatch(live);
-      // Also refresh player count
       const players = await fetchPlayerCount();
       setPlayerCount(players);
     });
     return unsub;
   }, []);
 
-  // Refresh leaderboard every 60 s (doesn't change that fast)
   useEffect(() => {
     const interval = setInterval(async () => {
       setLeaderboard(await fetchLeaderboard());
@@ -429,15 +421,21 @@ export default function LobbyPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handlePlay = useCallback((gameId: string) => router.push(`/game/${gameId}`), [router]);
-  const handleJoinLive = useCallback((gameId: string) => router.push(`/game/${gameId}?live=1`), [router]);
+  // Use game_id slug for routing, not UUID
+  const handlePlay = useCallback(
+    (gameId: string) => router.push(`/game/${gameId}`),
+    [router]
+  );
+  const handleJoinLive = useCallback(
+    (gameId: string) => router.push(`/game/${gameId}?live=1`),
+    [router]
+  );
 
   const handleSendChat = useCallback(
     async (text: string) => {
       if (!activeAddress) return;
-      // Optimistic update — Supabase realtime will also fire but we deduplicate above
       const optimistic: ChatMessage = {
-        id: Date.now(),   // temp id; won't match the DB id but that's fine
+        id: Date.now(),
         wallet: activeAddress,
         username: shortAddress ?? activeAddress,
         message: text,
@@ -480,9 +478,7 @@ export default function LobbyPage() {
               >
                 mini<span className="text-violet-400">game</span>
               </button>
-              <span
-                className="hidden sm:inline font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm uppercase tracking-wider"
-              >
+              <span className="hidden sm:inline font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm uppercase tracking-wider">
                 Lobby
               </span>
             </div>
@@ -635,7 +631,6 @@ export default function LobbyPage() {
               )}
             </SidebarCard>
 
-            {/* ── Realtime chat ── */}
             <SidebarCard title="Lobby chat · live" accentColor="#38bdf8">
               <LobbyChat
                 messages={chatMessages}

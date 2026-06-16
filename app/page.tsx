@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { useRouter } from "next/navigation"; // For Next.js 13+
+import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type GameType = "all" | "arcade" | "multi" | "trivia";
 type ConnectStep = "idle" | "connecting" | "success";
+type OnboardStatus = "pending" | "dripping" | "done" | "error";
 
 interface Game {
   id: string;
@@ -58,8 +60,7 @@ async function fetchUSDmPrice(): Promise<string> {
     );
     const data = await response.json();
     return data["true-usd"]?.usd?.toFixed(4) || "$1.00";
-  } catch (error) {
-    console.warn("Failed to fetch USDm price:", error);
+  } catch {
     return "$1.00";
   }
 }
@@ -69,8 +70,7 @@ async function fetchBlockNumber(): Promise<string> {
     const provider = new ethers.JsonRpcProvider(NETWORK_CONFIG.rpcUrl);
     const blockNumber = await provider.getBlockNumber();
     return `#${blockNumber.toLocaleString()}`;
-  } catch (error) {
-    console.warn("Failed to fetch block number:", error);
+  } catch {
     return "#N/A";
   }
 }
@@ -78,12 +78,9 @@ async function fetchBlockNumber(): Promise<string> {
 async function fetchGames(): Promise<Game[]> {
   try {
     const response = await fetch(`${NETWORK_CONFIG.backendUrl}/api/games`, {
-      method: "GET",
       headers: { "Content-Type": "application/json" },
     });
-
     if (!response.ok) throw new Error("Failed to fetch games");
-    
     const games = await response.json();
     return games.map((game: any) => ({
       id: game.id,
@@ -94,8 +91,7 @@ async function fetchGames(): Promise<Game[]> {
       players: game.activePlayers?.toString() || "0 playing",
       thumbBg: game.thumbBg || "linear-gradient(135deg,#100c2e,#1e1557)",
     }));
-  } catch (error) {
-    console.warn("Failed to fetch games:", error);
+  } catch {
     return [];
   }
 }
@@ -104,14 +100,9 @@ async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
   try {
     const response = await fetch(
       `${NETWORK_CONFIG.backendUrl}/api/leaderboard?limit=5&period=weekly`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      { headers: { "Content-Type": "application/json" } }
     );
-
     if (!response.ok) throw new Error("Failed to fetch leaderboard");
-
     const entries = await response.json();
     return entries.map((entry: any) => ({
       name: entry.username,
@@ -121,8 +112,7 @@ async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
       avatarColor: entry.avatarColor,
       avatarText: entry.avatarTextColor,
     }));
-  } catch (error) {
-    console.warn("Failed to fetch leaderboard:", error);
+  } catch {
     return [];
   }
 }
@@ -135,22 +125,16 @@ async function fetchUserStats(walletAddress: string): Promise<{
   try {
     const response = await fetch(
       `${NETWORK_CONFIG.backendUrl}/api/users/${walletAddress}/stats`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      { headers: { "Content-Type": "application/json" } }
     );
-
     if (!response.ok) throw new Error("Failed to fetch user stats");
-
     const stats = await response.json();
     return {
       xp: stats.xp.toLocaleString(),
       earnings: `${stats.earnings.toLocaleString()} USDm`,
-      winRate: `${Math.round(stats.wins / (stats.wins + stats.losses) * 100)}%`,
+      winRate: `${Math.round((stats.wins / (stats.wins + stats.losses)) * 100)}%`,
     };
-  } catch (error) {
-    console.warn("Failed to fetch user stats:", error);
+  } catch {
     return { xp: "—", earnings: "— USDm", winRate: "—" };
   }
 }
@@ -158,16 +142,12 @@ async function fetchUserStats(walletAddress: string): Promise<{
 async function fetchPlayerCount(): Promise<string> {
   try {
     const response = await fetch(`${NETWORK_CONFIG.backendUrl}/api/stats/players`, {
-      method: "GET",
       headers: { "Content-Type": "application/json" },
     });
-
-    if (!response.ok) throw new Error("Failed to fetch player count");
-
+    if (!response.ok) throw new Error();
     const data = await response.json();
     return data.active.toLocaleString();
-  } catch (error) {
-    console.warn("Failed to fetch player count:", error);
+  } catch {
     return "—";
   }
 }
@@ -176,19 +156,12 @@ async function fetchTotalDistributed(): Promise<string> {
   try {
     const response = await fetch(
       `${NETWORK_CONFIG.backendUrl}/api/stats/total-distributed`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }
+      { headers: { "Content-Type": "application/json" } }
     );
-
-    if (!response.ok) throw new Error("Failed to fetch total distributed");
-
+    if (!response.ok) throw new Error();
     const data = await response.json();
-    const totalInK = (data.total / 1000).toFixed(0);
-    return `${totalInK}K`;
-  } catch (error) {
-    console.warn("Failed to fetch total distributed:", error);
+    return `${(data.total / 1000).toFixed(0)}K`;
+  } catch {
     return "—";
   }
 }
@@ -202,15 +175,11 @@ function useMiniPay() {
 
   useEffect(() => {
     const provider = (window as any).ethereum;
-    if (provider?.isMiniPay) {
-      setIsMiniPay(true);
-    }
+    if (provider?.isMiniPay) setIsMiniPay(true);
   }, []);
 
   useEffect(() => {
-    if (isMiniPay && !authenticated) {
-      login();
-    }
+    if (isMiniPay && !authenticated) login();
   }, [isMiniPay, authenticated, login]);
 
   const miniPayWallet = isMiniPay
@@ -222,12 +191,7 @@ function useMiniPay() {
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : null;
 
-  return {
-    isMiniPay,
-    address,
-    shortAddress,
-    wallet: miniPayWallet ?? null,
-  };
+  return { isMiniPay, address, shortAddress, wallet: miniPayWallet ?? null };
 }
 
 // ─── Liquid Background ────────────────────────────────────────────────────────
@@ -281,9 +245,7 @@ function LiquidBackground() {
         for (let s = 0; s <= 7; s++) {
           const angle = (s / 7) * Math.PI * 2;
           const noise =
-            1 +
-            0.18 * Math.sin(angle * 3 + phase) +
-            0.09 * Math.cos(angle * 5 - phase * 1.3);
+            1 + 0.18 * Math.sin(angle * 3 + phase) + 0.09 * Math.cos(angle * 5 - phase * 1.3);
           const px = bx + Math.cos(angle) * br * noise;
           const py = by + Math.sin(angle) * br * noise;
           s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
@@ -332,29 +294,30 @@ function ConnectModal({
   step,
   onClose,
   shortAddress,
+  onboardStatus,
+  dripAmount,
+  onEnterLobby,
 }: {
   step: ConnectStep;
   onClose: () => void;
   shortAddress: string | null;
+  onboardStatus: OnboardStatus;
+  dripAmount: string | null;
+  onEnterLobby: () => void;
 }) {
-  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
+  const dripping = onboardStatus === "dripping";
 
   return (
     <div
-      onClick={handleBackdrop}
+      onClick={(e) => { if (e.target === e.currentTarget && !dripping) onClose(); }}
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
     >
+      {/* ── Connecting state */}
       {step === "connecting" && (
         <div
           className="w-full max-w-xs overflow-hidden"
-          style={{
-            background: "#0c0d14",
-            border: "0.5px solid rgba(56,189,248,0.25)",
-            borderRadius: "14px",
-          }}
+          style={{ background: "#0c0d14", border: "0.5px solid rgba(56,189,248,0.25)", borderRadius: "14px" }}
         >
           <div style={{ height: "1px", background: "linear-gradient(90deg,transparent,#38bdf8,transparent)" }} />
           <div className="p-6 text-center">
@@ -368,10 +331,8 @@ function ConnectModal({
               <div
                 className="absolute"
                 style={{
-                  inset: "-3px",
-                  borderRadius: "15px",
-                  border: "2px solid transparent",
-                  borderTopColor: "#38bdf8",
+                  inset: "-3px", borderRadius: "15px",
+                  border: "2px solid transparent", borderTopColor: "#38bdf8",
                   animation: "arc-spin 0.8s linear infinite",
                 }}
               />
@@ -391,46 +352,128 @@ function ConnectModal({
         </div>
       )}
 
+      {/* ── Success + drip status */}
       {step === "success" && (
         <div
           className="w-full max-w-xs overflow-hidden"
           style={{
             background: "#0c0d14",
-            border: "0.5px solid rgba(74,222,128,0.25)",
+            border: `0.5px solid ${onboardStatus === "done" ? "rgba(74,222,128,0.35)" : "rgba(56,189,248,0.25)"}`,
             borderRadius: "14px",
           }}
         >
-          <div style={{ height: "1px", background: "linear-gradient(90deg,transparent,#4ade80,transparent)" }} />
+          <div style={{
+            height: "1px",
+            background: onboardStatus === "done"
+              ? "linear-gradient(90deg,transparent,#4ade80,transparent)"
+              : "linear-gradient(90deg,transparent,#38bdf8,transparent)",
+          }} />
           <div className="p-6 text-center">
-            <div
-              className="w-14 h-14 mx-auto mb-5 rounded-xl flex items-center justify-center text-2xl"
-              style={{ background: "rgba(74,222,128,0.1)", border: "0.5px solid rgba(74,222,128,0.25)" }}
-            >
-              ✅
+            {/* Icon — spins while dripping, checkmark when done */}
+            <div className="relative w-14 h-14 mx-auto mb-5">
+              <div
+                className="absolute inset-0 rounded-xl flex items-center justify-center text-2xl"
+                style={{
+                  background: onboardStatus === "done" ? "rgba(74,222,128,0.1)" : "rgba(56,189,248,0.08)",
+                  border: `0.5px solid ${onboardStatus === "done" ? "rgba(74,222,128,0.25)" : "rgba(56,189,248,0.2)"}`,
+                }}
+              >
+                {onboardStatus === "done" ? "🎉" : onboardStatus === "error" ? "⚠️" : "⛽"}
+              </div>
+              {dripping && (
+                <div
+                  className="absolute"
+                  style={{
+                    inset: "-3px", borderRadius: "15px",
+                    border: "2px solid transparent", borderTopColor: "#38bdf8",
+                    animation: "arc-spin 0.8s linear infinite",
+                  }}
+                />
+              )}
             </div>
-            <p className="font-mono-arc text-sm font-bold text-gray-100 mb-1">Wallet connected!</p>
-            <p className="font-mono-arc text-[11px] text-gray-500 mb-4 leading-relaxed">
-              Your embedded wallet is ready.<br />Start earning USDm tokens.
+
+            <p className="font-mono-arc text-sm font-bold text-gray-100 mb-1">
+              {onboardStatus === "done" ? "You're all set!" : "Wallet connected!"}
             </p>
+
             {shortAddress && (
               <span
-                className="font-mono-arc text-[11px] text-green-400 px-3 py-1.5 rounded inline-block mb-5"
-                style={{
-                  background: "rgba(74,222,128,0.08)",
-                  border: "0.5px solid rgba(74,222,128,0.2)",
-                  letterSpacing: "0.06em",
-                }}
+                className="font-mono-arc text-[11px] text-green-400 px-3 py-1.5 rounded inline-block mb-4"
+                style={{ background: "rgba(74,222,128,0.08)", border: "0.5px solid rgba(74,222,128,0.2)", letterSpacing: "0.06em" }}
               >
                 {shortAddress}
               </span>
             )}
-            <button
-              onClick={onClose}
-              className="font-mono-arc text-[11px] font-bold uppercase tracking-wider w-full py-2.5 rounded-lg transition-all"
-              style={{ background: "#a78bfa", color: "#000" }}
+
+            {/* ── Drip status card */}
+            <div
+              className="rounded-lg px-4 py-3 mb-5 text-left"
+              style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.07)" }}
             >
-              Go to lobby →
+              {dripping && (
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-4 h-4 flex-shrink-0 rounded-full"
+                    style={{
+                      border: "2px solid transparent",
+                      borderTopColor: "#38bdf8",
+                      animation: "arc-spin 0.8s linear infinite",
+                    }}
+                  />
+                  <div>
+                    <p className="font-mono-arc text-[11px] text-cyan-300 font-bold">
+                      Sending welcome CELO…
+                    </p>
+                    <p className="font-mono-arc text-[10px] text-gray-500 mt-0.5">
+                      Registering your wallet on-chain
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {onboardStatus === "done" && (
+                <div className="flex items-center gap-3">
+                  <span className="text-base flex-shrink-0">⛽</span>
+                  <div>
+                    <p className="font-mono-arc text-[11px] text-green-400 font-bold">
+                      {dripAmount} CELO sent to your wallet!
+                    </p>
+                    <p className="font-mono-arc text-[10px] text-gray-500 mt-0.5">
+                      You&apos;re registered and ready to play
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {onboardStatus === "error" && (
+                <div className="flex items-center gap-3">
+                  <span className="text-base flex-shrink-0">⚠️</span>
+                  <div>
+                    <p className="font-mono-arc text-[11px] text-amber-400 font-bold">
+                      Drip skipped
+                    </p>
+                    <p className="font-mono-arc text-[10px] text-gray-500 mt-0.5">
+                      You can still play — try again later
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── CTA — disabled until drip resolves */}
+            <button
+              onClick={onEnterLobby}
+              disabled={dripping}
+              className="font-mono-arc text-[11px] font-bold uppercase tracking-wider w-full py-2.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: onboardStatus === "done" ? "#4ade80" : "#a78bfa",
+                color: "#000",
+              }}
+            >
+              {dripping ? "Please wait…" : "Enter lobby →"}
             </button>
+
+            <style>{`@keyframes arc-spin{to{transform:rotate(360deg)}}`}</style>
           </div>
         </div>
       )}
@@ -441,12 +484,7 @@ function ConnectModal({
 // ─── Wallet Dropdown ──────────────────────────────────────────────────────────
 
 function WalletDropdown({
-  shortAddress,
-  walletTypeLabel,
-  isMiniPay,
-  userStats,
-  onLogout,
-  onClose,
+  shortAddress, walletTypeLabel, isMiniPay, userStats, onLogout, onClose,
 }: {
   shortAddress: string;
   walletTypeLabel: string | null;
@@ -475,14 +513,7 @@ function WalletDropdown({
         borderRadius: "12px",
       }}
     >
-      <div
-        style={{
-          height: "1px",
-          background: isMiniPay
-            ? "linear-gradient(90deg,transparent,#38bdf8,transparent)"
-            : "linear-gradient(90deg,transparent,#a78bfa,transparent)",
-        }}
-      />
+      <div style={{ height: "1px", background: isMiniPay ? "linear-gradient(90deg,transparent,#38bdf8,transparent)" : "linear-gradient(90deg,transparent,#a78bfa,transparent)" }} />
       <div className="p-4">
         <div
           className="flex items-center gap-2 mb-4 px-2 py-1.5 rounded-lg"
@@ -491,10 +522,7 @@ function WalletDropdown({
             border: `0.5px solid ${isMiniPay ? "rgba(56,189,248,0.15)" : "rgba(167,139,250,0.12)"}`,
           }}
         >
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }}
-          />
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
           <div className="min-w-0">
             <p className={`font-mono-arc text-[11px] truncate ${isMiniPay ? "text-cyan-300" : "text-violet-300"}`}>
               {shortAddress}
@@ -508,9 +536,9 @@ function WalletDropdown({
         {userStats && (
           <div className="grid grid-cols-3 gap-1.5 mb-4">
             {[
-              { val: userStats.xp, label: "XP",  color: "#a78bfa" },
+              { val: userStats.xp,       label: "XP",   color: "#a78bfa" },
               { val: userStats.earnings, label: "USDm", color: "#38bdf8" },
-              { val: userStats.winRate, label: "Win", color: "#4ade80" },
+              { val: userStats.winRate,  label: "Win",  color: "#4ade80" },
             ].map(({ val, label, color }) => (
               <div
                 key={label}
@@ -556,23 +584,15 @@ function GameCard({ game }: { game: Game }) {
     multi:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
     trivia: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   };
-
   const TAG_LABELS: Record<Exclude<GameType, "all">, string> = {
-    arcade: "Arcade",
-    multi:  "Multiplayer",
-    trivia: "Trivia",
+    arcade: "Arcade", multi: "Multiplayer", trivia: "Trivia",
   };
 
   return (
     <div className="group flex flex-col glass-card cursor-pointer border-white/[0.06] hover:border-violet-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-      <div
-        className="h-16 flex items-center justify-center text-2xl flex-shrink-0"
-        style={{ background: game.thumbBg }}
-      />
+      <div className="h-16 flex items-center justify-center text-2xl flex-shrink-0" style={{ background: game.thumbBg }} />
       <div className="p-3 flex flex-col gap-2 flex-grow">
-        <p className="font-mono-arc text-xs font-bold text-gray-100 uppercase tracking-wider">
-          {game.title}
-        </p>
+        <p className="font-mono-arc text-xs font-bold text-gray-100 uppercase tracking-wider">{game.title}</p>
         <div className="flex items-center justify-between gap-1">
           <span className={`font-mono-arc text-[10px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${TAG_STYLES[game.type]}`}>
             {TAG_LABELS[game.type]}
@@ -589,7 +609,6 @@ function GameCard({ game }: { game: Game }) {
 
 function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   const RANK_COLORS = ["#fbbf24", "#94a3b8", "#c4704f", "#64748b", "#64748b"];
-
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] px-2 -mx-2 transition-colors">
       <span className="font-mono-arc text-xs w-5 flex-shrink-0 font-bold" style={{ color: RANK_COLORS[rank] }}>
@@ -611,13 +630,7 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
 // ─── HudPanel ─────────────────────────────────────────────────────────────────
 
 function HudPanel({
-  authenticated,
-  walletAddress,
-  embeddedWalletAddress,
-  isMiniPay,
-  miniPayAddress,
-  userStats,
-  onConnect,
+  authenticated, walletAddress, embeddedWalletAddress, isMiniPay, miniPayAddress, userStats, onConnect,
 }: {
   authenticated: boolean;
   walletAddress: string | null;
@@ -627,22 +640,14 @@ function HudPanel({
   userStats: { xp: string; earnings: string; winRate: string } | null;
   onConnect: () => void;
 }) {
-  const rawAddress = isMiniPay
-    ? miniPayAddress
-    : embeddedWalletAddress ?? walletAddress;
-  const shortAddress = rawAddress
-    ? `${rawAddress.slice(0, 6)}…${rawAddress.slice(-4)}`
-    : null;
-
-  const xpValue = userStats?.xp || "—";
-  const earningsValue = userStats?.earnings || "— USDm";
-  const winRateValue = userStats?.winRate || "—";
+  const rawAddress = isMiniPay ? miniPayAddress : embeddedWalletAddress ?? walletAddress;
+  const shortAddress = rawAddress ? `${rawAddress.slice(0, 6)}…${rawAddress.slice(-4)}` : null;
 
   const stats: HudStat[] = authenticated
     ? [
-        { label: "Your XP",      val: xpValue,       color: "#a78bfa", pct: 62 },
-        { label: "USDm balance", val: earningsValue, color: "#38bdf8", pct: 34 },
-        { label: "Win rate",     val: winRateValue,  color: "#4ade80", pct: 63 },
+        { label: "Your XP",      val: userStats?.xp       ?? "—", color: "#a78bfa", pct: 62 },
+        { label: "USDm balance", val: userStats?.earnings  ?? "—", color: "#38bdf8", pct: 34 },
+        { label: "Win rate",     val: userStats?.winRate   ?? "—", color: "#4ade80", pct: 63 },
       ]
     : [
         { label: "Your XP",      val: "—", color: "#374151", pct: 0 },
@@ -702,11 +707,12 @@ function HudPanel({
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const router = useRouter(); // Next.js router for navigation
+  const router = useRouter();
   const [filter, setFilter] = useState<GameType>("all");
   const [connectStep, setConnectStep] = useState<ConnectStep>("idle");
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // ── Data state
   const [games, setGames] = useState<Game[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [usdmPrice, setUsdmPrice] = useState<string>("$1.00");
@@ -716,17 +722,29 @@ export default function HomePage() {
   const [userStats, setUserStats] = useState<{ xp: string; earnings: string; winRate: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // ── Onboarding state — drives the modal's drip status card
+  const [onboardStatus, setOnboardStatus] = useState<OnboardStatus>("dripping");
+  const [dripAmount, setDripAmount] = useState<string | null>(null);
+
+  // ── Privy
   const { ready, authenticated, user, login, logout } = usePrivy();
   const { wallets } = useWallets();
 
   const embeddedWallet = wallets.find((w) => w.walletClientType === "privy");
   const externalWallet = wallets.find((w) => w.walletClientType !== "privy");
 
-  const { isMiniPay, address: miniPayAddress, shortAddress: miniPayShort } = useMiniPay();
+  // Get MiniPay wallet info
+  const { isMiniPay, address: miniPayAddress, shortAddress: miniPayShort, wallet: miniPayWalletObj } = useMiniPay();
 
+  // Determine active address for display and API calls
   const activeAddress = isMiniPay
     ? miniPayAddress
     : embeddedWallet?.address ?? externalWallet?.address ?? user?.wallet?.address ?? null;
+
+  // This is the actual wallet object capable of signing (needed for waitlist registration)
+  const activeWalletForSigning = isMiniPay
+    ? miniPayWalletObj
+    : embeddedWallet ?? externalWallet ?? null;
 
   const shortAddress = activeAddress
     ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
@@ -740,6 +758,27 @@ export default function HomePage() {
     ? "EXTERNAL"
     : null;
 
+  // ── Onboarding: drip CELO + register on waitlist for new users
+  // When connectStep flips to "success" we set status to "dripping" so the
+  // modal shows a spinner. useOnboarding fires the API call and calls back
+  // onSuccess / onError to update status, which unlocks the "Enter lobby" button.
+
+  // We need to track if onboarding has been triggered to avoid re-triggering
+  const [onboardingTriggered, setOnboardingTriggered] = useState(false);
+
+  const { retry: retryOnboarding } = useOnboarding({
+    wallet: activeWalletForSigning,
+    authenticated: authenticated || isMiniPay,
+    onSuccess: ({ dripAmount: amount }) => {
+      setDripAmount(amount);
+      setOnboardStatus("done");
+    },
+    onError: () => {
+      setOnboardStatus("error");
+    },
+  });
+
+  // ── Data loading
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -774,16 +813,29 @@ export default function HomePage() {
     };
 
     loadData();
-
-    const interval = setInterval(loadData, 30000);
+    const interval = setInterval(loadData, 30_000);
     return () => clearInterval(interval);
   }, [authenticated, activeAddress]);
 
+  // ── Flip modal to "success" once Privy confirms auth AND trigger onboarding
   useEffect(() => {
     if (authenticated && connectStep === "connecting") {
       setConnectStep("success");
+      
+      // Trigger onboarding when we first get authentication
+      if (!onboardingTriggered && activeWalletForSigning) {
+        setOnboardingTriggered(true);
+        setOnboardStatus("dripping");
+        // The useOnboarding hook will automatically run when wallet and authenticated are set
+      }
     }
-  }, [authenticated, connectStep]);
+  }, [authenticated, connectStep, activeWalletForSigning, onboardingTriggered]);
+
+  // Reset onboarding trigger when wallet changes
+  useEffect(() => {
+    setOnboardingTriggered(false);
+    setOnboardStatus("pending");
+  }, [activeWalletForSigning]);
 
   const handleConnect = useCallback(async () => {
     if (isMiniPay) return;
@@ -795,10 +847,11 @@ export default function HomePage() {
     }
   }, [login, isMiniPay]);
 
-  const handleModalClose = useCallback(() => setConnectStep("idle"), []);
+  const handleGoToLobby = useCallback(() => router.push("/lobby"), [router]);
 
-  // ✅ NEW: Navigate to lobby page
-  const handleGoToLobby = useCallback(() => {
+  // Called by "Enter lobby →" button — only reachable once drip resolves
+  const handleEnterLobby = useCallback(() => {
+    setConnectStep("idle");
     router.push("/lobby");
   }, [router]);
 
@@ -812,12 +865,16 @@ export default function HomePage() {
       {showModal && (
         <ConnectModal
           step={connectStep}
-          onClose={handleModalClose}
+          onClose={() => setConnectStep("idle")}
           shortAddress={shortAddress}
+          onboardStatus={onboardStatus}
+          dripAmount={dripAmount}
+          onEnterLobby={handleEnterLobby}
         />
       )}
 
       <div className="relative z-10">
+        {/* ── Nav */}
         <nav className="w-full glass sticky top-0 z-40 border-b border-white/[0.07]">
           <div className="flex items-center justify-between px-4 sm:px-6 py-3.5">
             <span className="font-mono-arc text-sm font-bold tracking-widest uppercase">
@@ -825,7 +882,7 @@ export default function HomePage() {
             </span>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <button 
+              <button
                 onClick={handleGoToLobby}
                 className="hidden sm:inline font-mono-arc text-[10px] px-3 py-2 glass-sm rounded-sm text-gray-400 hover:text-gray-100 uppercase tracking-wider transition-all"
               >
@@ -837,27 +894,20 @@ export default function HomePage() {
                   <button
                     onClick={() => setShowDropdown((v) => !v)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all"
-                    style={{
-                      background: "rgba(56,189,248,0.08)",
-                      border: "0.5px solid rgba(56,189,248,0.25)",
-                    }}
+                    style={{ background: "rgba(56,189,248,0.08)", border: "0.5px solid rgba(56,189,248,0.25)" }}
                   >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }}
-                    />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
                     <span className="font-mono-arc text-[10px] text-cyan-300 tracking-wider hidden sm:inline">
                       {miniPayShort ?? shortAddress ?? "Mainnet"}
                     </span>
                     <span className="font-mono-arc text-[9px] text-cyan-400 tracking-wider">⬡</span>
                     <span className="font-mono-arc text-[10px] text-cyan-400/50">▾</span>
                   </button>
-
                   {showDropdown && shortAddress && (
                     <WalletDropdown
                       shortAddress={shortAddress}
                       walletTypeLabel={walletTypeLabel}
-                      isMiniPay={isMiniPay}
+                      isMiniPay={true}
                       userStats={userStats}
                       onLogout={logout}
                       onClose={() => setShowDropdown(false)}
@@ -871,15 +921,9 @@ export default function HomePage() {
                   <button
                     onClick={() => setShowDropdown((v) => !v)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all hover:border-violet-400/40"
-                    style={{
-                      background: "rgba(167,139,250,0.08)",
-                      border: "0.5px solid rgba(167,139,250,0.25)",
-                    }}
+                    style={{ background: "rgba(167,139,250,0.08)", border: "0.5px solid rgba(167,139,250,0.25)" }}
                   >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }}
-                    />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
                     {shortAddress && (
                       <span className="font-mono-arc text-[10px] text-violet-300 tracking-wider hidden sm:inline">
                         {shortAddress}
@@ -887,7 +931,6 @@ export default function HomePage() {
                     )}
                     <span className="font-mono-arc text-[10px] text-violet-400/50">▾</span>
                   </button>
-
                   {showDropdown && shortAddress && (
                     <WalletDropdown
                       shortAddress={shortAddress}
@@ -912,12 +955,10 @@ export default function HomePage() {
           </div>
         </nav>
 
+        {/* ── Ticker */}
         <div className="flex items-center gap-5 px-4 sm:px-6 py-2 border-b border-white/[0.04] bg-black/30 backdrop-blur-sm overflow-x-auto">
           <span className="font-mono-arc text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"
-              style={{ boxShadow: "0 0 5px #4ade80" }}
-            />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" style={{ boxShadow: "0 0 5px #4ade80" }} />
             NETWORK: <span className="text-violet-400">{NETWORK_CONFIG.displayName}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
@@ -929,24 +970,24 @@ export default function HomePage() {
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
             BLOCK: <span className="text-violet-400">{blockNumber}</span>
           </span>
-
           {(authenticated || isMiniPay) && walletTypeLabel && (
             <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap hidden sm:inline">
               WALLET: <span className="text-cyan-400">{walletTypeLabel}</span>
             </span>
           )}
-
           <span className="font-mono-arc text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
             SYS_OK ████ 100%
           </span>
         </div>
 
+        {/* ── Hero */}
         <section className="w-full px-4 sm:px-6 py-14 sm:py-20">
           <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-10 items-start">
             <div>
               <p className="font-mono-arc text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                MINIGAME PROTOCOL v2.4 — MAINNET INITIALIZED              </p>
+                MINIGAME PROTOCOL v2.4 — MAINNET INITIALIZED
+              </p>
               <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] tracking-tight mb-5">
                 Play mini games.<br />
                 <span className="text-violet-400">Earn rewards.</span><br />
@@ -959,7 +1000,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 {authenticated || isMiniPay ? (
-                  <button 
+                  <button
                     onClick={handleGoToLobby}
                     className="font-mono-arc text-xs px-7 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 transition-all uppercase tracking-wider"
                   >
@@ -973,7 +1014,7 @@ export default function HomePage() {
                     [ Get started — it&apos;s free ]
                   </button>
                 )}
-                <button 
+                <button
                   onClick={handleGoToLobby}
                   className="font-mono-arc text-xs px-7 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider"
                 >
@@ -994,13 +1035,14 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ── Stats bar */}
         <div className="border-y border-white/[0.05] bg-black/20 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4">
             {[
-              { num: playerCount, label: "Players online",     color: "#a78bfa" },
-              { num: `${games.length}`, label: "Games available",    color: "#38bdf8" },
-              { num: totalDistributed, label: "USDm tokens paid",   color: "#e2e8f0" },
-              { num: "Free", label: "To join",            color: "#4ade80" },
+              { num: playerCount,        label: "Players online",   color: "#a78bfa" },
+              { num: `${games.length}`,  label: "Games available",  color: "#38bdf8" },
+              { num: totalDistributed,   label: "USDm tokens paid", color: "#e2e8f0" },
+              { num: "Free",             label: "To join",          color: "#4ade80" },
             ].map((s, i) => (
               <div
                 key={s.label}
@@ -1013,6 +1055,7 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* ── Games grid */}
         <section className="w-full px-4 sm:px-6 py-10">
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -1029,9 +1072,7 @@ export default function HomePage() {
                     key={f}
                     onClick={() => setFilter(f)}
                     className={`font-mono-arc text-[9px] px-3 py-1.5 rounded-sm uppercase tracking-wider transition-all ${
-                      filter === f
-                        ? "bg-violet-500 text-black font-bold"
-                        : "glass-sm text-gray-500 hover:text-gray-200"
+                      filter === f ? "bg-violet-500 text-black font-bold" : "glass-sm text-gray-500 hover:text-gray-200"
                     }`}
                   >
                     {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -1056,6 +1097,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ── Leaderboard */}
         <section className="w-full px-4 sm:px-6 py-8 border-t border-white/[0.05]">
           <div className="max-w-5xl mx-auto">
             <div className="glass-card p-5 sm:p-6 border-pink-500/10 relative overflow-hidden">

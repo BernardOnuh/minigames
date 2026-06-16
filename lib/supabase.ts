@@ -1,10 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
 // ─── Client ───────────────────────────────────────────────────────────────────
-// Add to your .env.local:
-//   NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-//   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-
 const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -13,12 +9,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnon);
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Game {
-  id: string;
+  id: string;       // UUID — used as React key only
+  gameId: string;   // slug e.g. "flappy_bird" — used for routing
   title: string;
   type: "arcade" | "multi" | "trivia";
   icon: string;
   reward: string;
-  players: string;          // computed client-side from match_players count
+  players: string;
   thumbBg: string;
 }
 
@@ -62,7 +59,7 @@ export interface UserStats {
 export async function fetchGames(): Promise<Game[]> {
   const { data, error } = await supabase
     .from("games")
-    .select("id, title, type, icon, reward, thumb_bg")
+    .select("id, game_id, title, type, icon, reward, thumb_bg")
     .eq("is_active", true)
     .order("created_at");
 
@@ -71,7 +68,6 @@ export async function fetchGames(): Promise<Game[]> {
     return [];
   }
 
-  // Count active players per game from live/waiting matches
   const { data: playerCounts } = await supabase
     .from("match_players")
     .select("match_id, matches!inner(game_id, status)")
@@ -85,6 +81,7 @@ export async function fetchGames(): Promise<Game[]> {
 
   return data.map((g) => ({
     id: g.id,
+    gameId: g.game_id,        // ← slug for routing
     title: g.title,
     type: g.type as Game["type"],
     icon: g.icon,
@@ -225,8 +222,6 @@ export async function sendChatMessage(
   return true;
 }
 
-// Subscribe to new chat messages in real-time.
-// Returns an unsubscribe function — call it in useEffect cleanup.
 export function subscribeLobbyChat(
   onMessage: (msg: ChatMessage) => void
 ): () => void {
@@ -248,15 +243,10 @@ export function subscribeLobbyChat(
     )
     .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+  return () => { supabase.removeChannel(channel); };
 }
 
-// Subscribe to live match updates (status changes)
-export function subscribeLiveMatches(
-  onUpdate: () => void
-): () => void {
+export function subscribeLiveMatches(onUpdate: () => void): () => void {
   const channel = supabase
     .channel("live-matches")
     .on(
@@ -266,9 +256,7 @@ export function subscribeLiveMatches(
     )
     .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+  return () => { supabase.removeChannel(channel); };
 }
 
 // ─── Player count ─────────────────────────────────────────────────────────────
