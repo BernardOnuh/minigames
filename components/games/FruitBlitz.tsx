@@ -170,6 +170,7 @@ export default function FruitBlitzGame({
   const rafRef = useRef<number>(0);
   const isRunningRef = useRef(false);
   const gameOverTriggeredRef = useRef(false);
+  const loopActiveRef = useRef(false);
 
   const [displayScore, setDisplayScore] = useState(0);
   const [displayLives, setDisplayLives] = useState(3);
@@ -236,6 +237,7 @@ export default function FruitBlitzGame({
     const s = stateRef.current;
     s.isGameOver = true;
     s.phase = "dead";
+    loopActiveRef.current = false;
     
     const xp = Math.max(10, Math.floor((score / 1000) * (gameConfig.base_xp ?? 75)));
     setFinalScore(score);
@@ -262,13 +264,27 @@ export default function FruitBlitzGame({
   // ── Main loop ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (gamePhase !== "playing") return;
+    if (gamePhase !== "playing") {
+      // Clean up if not playing
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      isRunningRef.current = false;
+      loopActiveRef.current = false;
+      return;
+    }
+    
     if (isRunningRef.current) return;
     isRunningRef.current = true;
     gameOverTriggeredRef.current = false;
+    loopActiveRef.current = true;
 
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      isRunningRef.current = false;
+      return;
+    }
     const ctx = canvas.getContext("2d")!;
 
     const resize = () => {
@@ -310,11 +326,9 @@ export default function FruitBlitzGame({
     setDisplayLives(3);
     setDisplayCombo(0);
 
-    let dead = false;
-
     const loop = () => {
       // Check if game should stop
-      if (s.isGameOver || gamePhase !== "playing") {
+      if (!loopActiveRef.current || s.isGameOver || gamePhase !== "playing") {
         return;
       }
 
@@ -369,7 +383,6 @@ export default function FruitBlitzGame({
             setDisplayLives(s.lives);
             setDisplayCombo(0);
             if (s.lives <= 0 && !s.isGameOver) {
-              dead = true;
               endGame(s.score);
               return;
             }
@@ -538,7 +551,7 @@ export default function FruitBlitzGame({
       }
 
       // Continue loop if game is still active
-      if (!s.isGameOver && !dead) {
+      if (loopActiveRef.current && !s.isGameOver) {
         rafRef.current = requestAnimationFrame(loop);
       }
     };
@@ -547,6 +560,7 @@ export default function FruitBlitzGame({
 
     return () => {
       isRunningRef.current = false;
+      loopActiveRef.current = false;
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
@@ -601,10 +615,14 @@ export default function FruitBlitzGame({
     const pos = getPos(e);
     s.slashPoints.push({ ...pos, t: performance.now() });
 
+    const itemsToSlice: Item[] = [];
     for (const item of s.items) {
       if (item.sliced) continue;
       if (!hitTest(pos.x, pos.y, item.x, item.y, item.radius, W, H)) continue;
-      
+      itemsToSlice.push(item);
+    }
+
+    for (const item of itemsToSlice) {
       item.sliced = true;
       item.splashTimer = 0;
 
@@ -616,6 +634,7 @@ export default function FruitBlitzGame({
         spawnParticles(item.x, item.y, "#ef4444", 14);
         if (s.lives <= 0 && !s.isGameOver) {
           endGame(s.score);
+          return;
         }
       } else {
         s.combo++;
@@ -680,10 +699,14 @@ export default function FruitBlitzGame({
             const pos = getPos(e as any);
             s.slashPoints.push({ ...pos, t: performance.now() });
 
+            const itemsToSlice: Item[] = [];
             for (const item of s.items) {
               if (item.sliced) continue;
               if (!hitTest(pos.x, pos.y, item.x, item.y, item.radius, W, H)) continue;
-              
+              itemsToSlice.push(item);
+            }
+
+            for (const item of itemsToSlice) {
               item.sliced = true;
               item.splashTimer = 0;
 
@@ -695,6 +718,7 @@ export default function FruitBlitzGame({
                 spawnParticles(item.x, item.y, "#ef4444", 14);
                 if (s.lives <= 0 && !s.isGameOver) {
                   endGame(s.score);
+                  return;
                 }
               } else {
                 s.combo++;
