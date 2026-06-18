@@ -51,7 +51,6 @@ const FRUIT_DATA: Record<FruitType, { emoji: string; color: string; splash: stri
 };
 
 const FRUITS: FruitType[] = ["watermelon", "orange", "strawberry", "banana", "grape", "pineapple"];
-// Slower gravity & velocity
 const GRAVITY = 0.018;
 const SLASH_TRAIL_DURATION = 200;
 const SLASH_RADIUS = 4;
@@ -87,19 +86,12 @@ function XPClaimScreen({
       className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-6"
       style={{ background: "rgba(10,6,25,0.97)" }}
     >
-      {/* Trophy */}
       <div style={{ fontSize: 56 }}>🏆</div>
-
-      {/* Score */}
       <div className="text-center">
         <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">Final score</p>
         <p className="font-mono-arc text-5xl font-bold text-white tabular-nums">{score.toLocaleString()}</p>
       </div>
-
-      {/* Divider */}
       <div className="w-full h-px" style={{ background: "rgba(167,139,250,0.15)" }} />
-
-      {/* XP section */}
       {!claimed ? (
         <div className="text-center flex flex-col items-center gap-4">
           <p className="font-mono-arc text-[9px] text-violet-400 uppercase tracking-[0.2em]">XP earned this round</p>
@@ -157,7 +149,6 @@ export default function FruitBlitzGame({
 }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // All mutable game state lives here — never causes re-renders
   const stateRef = useRef({
     items: [] as Item[],
     particles: [] as Particle[],
@@ -168,14 +159,14 @@ export default function FruitBlitzGame({
     comboTimer: 0,
     frame: 0,
     spawnTimer: 0,
-    spawnInterval: 110,   // frames between spawns (slower start)
+    spawnInterval: 110,
     nextId: 0,
     phase: "playing" as "playing" | "dead",
     isSlashing: false,
   });
 
   const rafRef = useRef<number>(0);
-  const isRunningRef = useRef(false); // prevents double-loop on StrictMode
+  const isRunningRef = useRef(false);
 
   const [displayScore, setDisplayScore] = useState(0);
   const [displayLives, setDisplayLives] = useState(3);
@@ -185,14 +176,11 @@ export default function FruitBlitzGame({
   const [finalScore, setFinalScore] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
-
   const spawnItem = useCallback(() => {
     const s = stateRef.current;
     const isBomb = Math.random() < 0.10 + s.frame * 0.000015;
     const type: ItemType = isBomb ? "bomb" : FRUITS[Math.floor(Math.random() * FRUITS.length)];
     const x = 12 + Math.random() * 76;
-    // Slower launch speed, gentler scaling
     const vy = -(1.4 + Math.random() * 1.0 + s.frame * 0.0003);
     const vx = (Math.random() - 0.5) * 0.7;
     s.items.push({
@@ -243,8 +231,6 @@ export default function FruitBlitzGame({
     setGamePhase("results");
   }, [gameConfig.base_xp]);
 
-  // ── Countdown ────────────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (gamePhase !== "countdown") return;
     if (countdown <= 0) { setGamePhase("playing"); return; }
@@ -252,11 +238,11 @@ export default function FruitBlitzGame({
     return () => clearTimeout(t);
   }, [countdown, gamePhase]);
 
-  // ── Main loop — starts when gamePhase = "playing" ─────────────────────────
+  // ── Main loop ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (gamePhase !== "playing") return;
-    if (isRunningRef.current) return; // guard against StrictMode double-mount
+    if (isRunningRef.current) return;
     isRunningRef.current = true;
 
     const canvas = canvasRef.current;
@@ -264,13 +250,22 @@ export default function FruitBlitzGame({
     const ctx = canvas.getContext("2d")!;
 
     const resize = () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (!rect) return;
+      
+      // Use device pixel ratio for sharper rendering on mobile
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = `${rect.width}px`;
+      canvas.style.height = `${rect.height}px`;
+      ctx.scale(dpr, dpr);
     };
+    
     resize();
     window.addEventListener("resize", resize);
+    window.addEventListener("orientationchange", resize);
 
-    // Reset state cleanly
     const s = stateRef.current;
     s.items = [];
     s.particles = [];
@@ -284,13 +279,17 @@ export default function FruitBlitzGame({
     s.spawnInterval = 110;
     s.phase = "playing";
 
-    let dead = false; // local flag so loop stops synchronously
+    let dead = false;
 
     const loop = () => {
       if (dead) return;
 
-      const W = canvas.width;
-      const H = canvas.height;
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (!rect) { rafRef.current = requestAnimationFrame(loop); return; }
+      
+      const W = rect.width;
+      const H = rect.height;
+      
       s.frame++;
       s.spawnTimer++;
       s.comboTimer = Math.max(0, s.comboTimer - 1);
@@ -299,16 +298,13 @@ export default function FruitBlitzGame({
         setDisplayCombo(0);
       }
 
-      // Spawn fruit
       if (s.spawnTimer >= s.spawnInterval) {
         spawnItem();
-        // Randomly spawn 2 at once sometimes (later in game)
         if (s.frame > 300 && Math.random() < 0.25) spawnItem();
         s.spawnTimer = 0;
         s.spawnInterval = Math.max(45, 110 - s.frame * 0.04);
       }
 
-      // Update items
       for (const item of s.items) {
         if (item.sliced) { item.splashTimer++; continue; }
         item.vy += GRAVITY;
@@ -365,7 +361,7 @@ export default function FruitBlitzGame({
         ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
       }
 
-      // Items
+      // Items - with mobile-optimized rendering
       for (const item of s.items) {
         const cx = (item.x / 100) * W;
         const cy = (item.y / 100) * H;
@@ -383,12 +379,14 @@ export default function FruitBlitzGame({
             ctx.lineWidth = 2.5;
             ctx.globalAlpha = alpha * 0.45;
             ctx.stroke();
-            // Flying half
+            // Flying half - optimized for mobile
             ctx.globalAlpha = alpha;
             ctx.save();
             ctx.translate(cx - item.splashTimer * 1.5, cy + item.splashTimer * 0.4);
             ctx.rotate(item.rotation + item.splashTimer * 0.06);
-            ctx.font = `${item.radius * 1.3}px serif`;
+            // Use larger font size for mobile visibility
+            const fontSize = Math.max(item.radius * 1.6, 30);
+            ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(fd.emoji, 0, 0);
@@ -422,25 +420,24 @@ export default function FruitBlitzGame({
           ctx.strokeStyle = "#555";
           ctx.lineWidth = 1.5;
           ctx.stroke();
-          // Fuse
           ctx.beginPath();
           ctx.moveTo(0, -item.radius);
           ctx.quadraticCurveTo(item.radius * 0.5, -item.radius * 1.5, item.radius * 0.2, -item.radius * 1.9);
           ctx.strokeStyle = "#7a5c0a";
           ctx.lineWidth = 2;
           ctx.stroke();
-          // Flicker spark
           ctx.beginPath();
           ctx.arc(item.radius * 0.2, -item.radius * 1.9, 3.5, 0, Math.PI * 2);
           ctx.fillStyle = `hsl(${(s.frame * 18) % 60 + 15},100%,62%)`;
           ctx.fill();
-          ctx.font = `${item.radius * 0.85}px serif`;
+          const bombFontSize = Math.max(item.radius * 1.2, 24);
+          ctx.font = `${bombFontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText("💀", 0, 2);
         } else {
           const fd = FRUIT_DATA[item.type as FruitType];
-          // Soft glow
+          // Glow
           const glow = ctx.createRadialGradient(0, 0, item.radius * 0.4, 0, 0, item.radius + 8);
           glow.addColorStop(0, fd.color + "00");
           glow.addColorStop(1, fd.color + "28");
@@ -448,7 +445,9 @@ export default function FruitBlitzGame({
           ctx.arc(0, 0, item.radius + 8, 0, Math.PI * 2);
           ctx.fillStyle = glow;
           ctx.fill();
-          ctx.font = `${item.radius * 1.65}px serif`;
+          // Larger font for mobile
+          const fontSize = Math.max(item.radius * 2.2, 40);
+          ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(fd.emoji, 0, 0);
@@ -498,35 +497,52 @@ export default function FruitBlitzGame({
       isRunningRef.current = false;
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("orientationchange", resize);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gamePhase]);
+  }, [gamePhase, spawnItem, spawnParticles, killGame]);
 
   // ── Pointer handlers ─────────────────────────────────────────────────────────
 
-  const getPos = (e: React.PointerEvent) => {
+  const getPos = useCallback((e: React.PointerEvent | React.TouchEvent) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
+    
+    let clientX: number, clientY: number;
+    
+    if ('touches' in e) {
+      // Touch event
+      const touch = e.touches[0] || e.changedTouches[0];
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      // Pointer event
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
     return {
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100,
     };
-  };
+  }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
     if (gamePhase !== "playing") return;
     const s = stateRef.current;
     s.isSlashing = true;
     const pos = getPos(e);
     s.slashPoints = [{ ...pos, t: performance.now() }];
-  }, [gamePhase]);
+  }, [gamePhase, getPos]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
     if (gamePhase !== "playing") return;
     const s = stateRef.current;
     if (!s.isSlashing) return;
     const canvas = canvasRef.current!;
-    const W = canvas.width, H = canvas.height;
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
     const pos = getPos(e);
     s.slashPoints.push({ ...pos, t: performance.now() });
 
@@ -554,9 +570,10 @@ export default function FruitBlitzGame({
         spawnParticles(item.x, item.y, fd.splash, 12);
       }
     }
-  }, [gamePhase, hitTest, spawnParticles, killGame]);
+  }, [gamePhase, getPos, hitTest, spawnParticles, killGame]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
     stateRef.current.isSlashing = false;
   }, []);
 
@@ -576,7 +593,6 @@ export default function FruitBlitzGame({
           border: "0.5px solid rgba(255,255,255,0.08)",
         }}
       >
-        {/* Canvas always mounted so ref is stable */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full touch-none"
@@ -584,6 +600,54 @@ export default function FruitBlitzGame({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            if (gamePhase !== "playing") return;
+            const s = stateRef.current;
+            s.isSlashing = true;
+            const pos = getPos(e as any);
+            s.slashPoints = [{ ...pos, t: performance.now() }];
+          }}
+          onTouchMove={(e) => {
+            e.preventDefault();
+            if (gamePhase !== "playing") return;
+            const s = stateRef.current;
+            if (!s.isSlashing) return;
+            const canvas = canvasRef.current!;
+            const rect = canvas.getBoundingClientRect();
+            const W = rect.width, H = rect.height;
+            const pos = getPos(e as any);
+            s.slashPoints.push({ ...pos, t: performance.now() });
+
+            for (const item of s.items) {
+              if (item.sliced) continue;
+              if (!hitTest(pos.x, pos.y, item.x, item.y, item.radius, W, H)) continue;
+              item.sliced = true;
+              item.splashTimer = 0;
+
+              if (item.type === "bomb") {
+                s.combo = 0;
+                s.lives = Math.max(0, s.lives - 1);
+                setDisplayLives(s.lives);
+                setDisplayCombo(0);
+                spawnParticles(item.x, item.y, "#ef4444", 14);
+                if (s.lives <= 0) killGame(s.score);
+              } else {
+                s.combo++;
+                s.comboTimer = 100;
+                const fd = FRUIT_DATA[item.type as FruitType];
+                const points = 10 * Math.max(1, s.combo);
+                s.score += points;
+                setDisplayScore(s.score);
+                setDisplayCombo(s.combo);
+                spawnParticles(item.x, item.y, fd.splash, 12);
+              }
+            }
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            stateRef.current.isSlashing = false;
+          }}
           style={{ cursor: "crosshair" }}
         />
 
@@ -609,7 +673,6 @@ export default function FruitBlitzGame({
           </div>
         )}
 
-        {/* Combo badge */}
         {displayCombo >= 2 && gamePhase === "playing" && (
           <div className="absolute top-16 left-0 right-0 flex justify-center pointer-events-none">
             <div
@@ -628,7 +691,6 @@ export default function FruitBlitzGame({
           </div>
         )}
 
-        {/* Countdown */}
         {gamePhase === "countdown" && (
           <div
             className="absolute inset-0 flex flex-col items-center justify-center"
@@ -649,7 +711,6 @@ export default function FruitBlitzGame({
           </div>
         )}
 
-        {/* Results / XP claim */}
         {gamePhase === "results" && (
           <XPClaimScreen
             score={finalScore}
@@ -658,7 +719,6 @@ export default function FruitBlitzGame({
           />
         )}
 
-        {/* Hint */}
         {gamePhase === "playing" && stateRef.current.frame < 160 && (
           <div className="absolute bottom-5 left-0 right-0 flex justify-center pointer-events-none">
             <p className="font-mono-arc text-[9px] text-gray-700 uppercase tracking-widest">
