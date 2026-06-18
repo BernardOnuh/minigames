@@ -148,6 +148,7 @@ export default function FruitBlitzGame({
   shortAddress,
 }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
   const stateRef = useRef({
     items: [] as Item[],
@@ -163,10 +164,12 @@ export default function FruitBlitzGame({
     nextId: 0,
     phase: "playing" as "playing" | "dead",
     isSlashing: false,
+    isGameOver: false,
   });
 
   const rafRef = useRef<number>(0);
   const isRunningRef = useRef(false);
+  const gameOverTriggeredRef = useRef(false);
 
   const [displayScore, setDisplayScore] = useState(0);
   const [displayLives, setDisplayLives] = useState(3);
@@ -178,6 +181,8 @@ export default function FruitBlitzGame({
 
   const spawnItem = useCallback(() => {
     const s = stateRef.current;
+    if (s.isGameOver) return;
+    
     const isBomb = Math.random() < 0.10 + s.frame * 0.000015;
     const type: ItemType = isBomb ? "bomb" : FRUITS[Math.floor(Math.random() * FRUITS.length)];
     const x = 12 + Math.random() * 76;
@@ -224,16 +229,32 @@ export default function FruitBlitzGame({
     []
   );
 
-  const killGame = useCallback((score: number) => {
+  const endGame = useCallback((score: number) => {
+    if (gameOverTriggeredRef.current) return;
+    gameOverTriggeredRef.current = true;
+    
+    const s = stateRef.current;
+    s.isGameOver = true;
+    s.phase = "dead";
+    
     const xp = Math.max(10, Math.floor((score / 1000) * (gameConfig.base_xp ?? 75)));
     setFinalScore(score);
     setXpEarned(xp);
     setGamePhase("results");
+    
+    // Cancel the animation frame
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
   }, [gameConfig.base_xp]);
 
   useEffect(() => {
     if (gamePhase !== "countdown") return;
-    if (countdown <= 0) { setGamePhase("playing"); return; }
+    if (countdown <= 0) { 
+      setGamePhase("playing"); 
+      return; 
+    }
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [countdown, gamePhase]);
@@ -244,16 +265,19 @@ export default function FruitBlitzGame({
     if (gamePhase !== "playing") return;
     if (isRunningRef.current) return;
     isRunningRef.current = true;
+    gameOverTriggeredRef.current = false;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
 
     const resize = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (!rect) return;
+      const wrapper = canvasWrapperRef.current;
+      if (!wrapper) return;
       
-      // Use device pixel ratio for sharper rendering on mobile
+      const rect = wrapper.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) return;
+      
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
@@ -266,6 +290,7 @@ export default function FruitBlitzGame({
     window.addEventListener("resize", resize);
     window.addEventListener("orientationchange", resize);
 
+    // Reset state
     const s = stateRef.current;
     s.items = [];
     s.particles = [];
@@ -278,18 +303,37 @@ export default function FruitBlitzGame({
     s.spawnTimer = 0;
     s.spawnInterval = 110;
     s.phase = "playing";
+    s.isGameOver = false;
+    s.isSlashing = false;
+
+    setDisplayScore(0);
+    setDisplayLives(3);
+    setDisplayCombo(0);
 
     let dead = false;
 
     const loop = () => {
-      if (dead) return;
+      // Check if game should stop
+      if (s.isGameOver || gamePhase !== "playing") {
+        return;
+      }
 
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (!rect) { rafRef.current = requestAnimationFrame(loop); return; }
+      const wrapper = canvasWrapperRef.current;
+      if (!wrapper) { 
+        rafRef.current = requestAnimationFrame(loop); 
+        return; 
+      }
+      
+      const rect = wrapper.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) {
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
       
       const W = rect.width;
       const H = rect.height;
       
+      // Update game state
       s.frame++;
       s.spawnTimer++;
       s.comboTimer = Math.max(0, s.comboTimer - 1);
@@ -298,38 +342,46 @@ export default function FruitBlitzGame({
         setDisplayCombo(0);
       }
 
-      if (s.spawnTimer >= s.spawnInterval) {
+      // Spawn items
+      if (s.spawnTimer >= s.spawnInterval && !s.isGameOver) {
         spawnItem();
         if (s.frame > 300 && Math.random() < 0.25) spawnItem();
         s.spawnTimer = 0;
         s.spawnInterval = Math.max(45, 110 - s.frame * 0.04);
       }
 
+      // Update items
       for (const item of s.items) {
-        if (item.sliced) { item.splashTimer++; continue; }
+        if (item.sliced) { 
+          item.splashTimer++; 
+          continue; 
+        }
         item.vy += GRAVITY;
         item.y += item.vy;
         item.x += item.vx;
         item.rotation += item.rotSpeed;
 
-        if (item.y > 112 && !item.sliced) {
+        if (item.y > 112 && !item.sliced && !s.isGameOver) {
           item.sliced = true;
           if (item.type !== "bomb") {
             s.lives = Math.max(0, s.lives - 1);
             s.combo = 0;
             setDisplayLives(s.lives);
             setDisplayCombo(0);
-            if (s.lives <= 0 && !dead) {
+            if (s.lives <= 0 && !s.isGameOver) {
               dead = true;
-              killGame(s.score);
+              endGame(s.score);
+              return;
             }
           }
         }
       }
 
+      // Clean up items
       s.items = s.items.filter((i) => !i.sliced || i.splashTimer < 28);
       s.particles = s.particles.filter((p) => p.life > 0);
 
+      // Update particles
       for (const p of s.particles) {
         p.x += p.vx;
         p.y += p.vy;
@@ -361,7 +413,7 @@ export default function FruitBlitzGame({
         ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
       }
 
-      // Items - with mobile-optimized rendering
+      // Items
       for (const item of s.items) {
         const cx = (item.x / 100) * W;
         const cy = (item.y / 100) * H;
@@ -379,12 +431,11 @@ export default function FruitBlitzGame({
             ctx.lineWidth = 2.5;
             ctx.globalAlpha = alpha * 0.45;
             ctx.stroke();
-            // Flying half - optimized for mobile
+            // Flying half
             ctx.globalAlpha = alpha;
             ctx.save();
             ctx.translate(cx - item.splashTimer * 1.5, cy + item.splashTimer * 0.4);
             ctx.rotate(item.rotation + item.splashTimer * 0.06);
-            // Use larger font size for mobile visibility
             const fontSize = Math.max(item.radius * 1.6, 30);
             ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
             ctx.textAlign = "center";
@@ -437,7 +488,6 @@ export default function FruitBlitzGame({
           ctx.fillText("💀", 0, 2);
         } else {
           const fd = FRUIT_DATA[item.type as FruitType];
-          // Glow
           const glow = ctx.createRadialGradient(0, 0, item.radius * 0.4, 0, 0, item.radius + 8);
           glow.addColorStop(0, fd.color + "00");
           glow.addColorStop(1, fd.color + "28");
@@ -445,7 +495,6 @@ export default function FruitBlitzGame({
           ctx.arc(0, 0, item.radius + 8, 0, Math.PI * 2);
           ctx.fillStyle = glow;
           ctx.fill();
-          // Larger font for mobile
           const fontSize = Math.max(item.radius * 2.2, 40);
           ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
           ctx.textAlign = "center";
@@ -488,18 +537,24 @@ export default function FruitBlitzGame({
         ctx.restore();
       }
 
-      if (!dead) rafRef.current = requestAnimationFrame(loop);
+      // Continue loop if game is still active
+      if (!s.isGameOver && !dead) {
+        rafRef.current = requestAnimationFrame(loop);
+      }
     };
 
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
       isRunningRef.current = false;
-      cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
       window.removeEventListener("resize", resize);
       window.removeEventListener("orientationchange", resize);
     };
-  }, [gamePhase, spawnItem, spawnParticles, killGame]);
+  }, [gamePhase, spawnItem, spawnParticles, endGame]);
 
   // ── Pointer handlers ─────────────────────────────────────────────────────────
 
@@ -510,12 +565,10 @@ export default function FruitBlitzGame({
     let clientX: number, clientY: number;
     
     if ('touches' in e) {
-      // Touch event
       const touch = e.touches[0] || e.changedTouches[0];
       clientX = touch.clientX;
       clientY = touch.clientY;
     } else {
-      // Pointer event
       clientX = e.clientX;
       clientY = e.clientY;
     }
@@ -530,6 +583,7 @@ export default function FruitBlitzGame({
     e.preventDefault();
     if (gamePhase !== "playing") return;
     const s = stateRef.current;
+    if (s.isGameOver) return;
     s.isSlashing = true;
     const pos = getPos(e);
     s.slashPoints = [{ ...pos, t: performance.now() }];
@@ -539,7 +593,8 @@ export default function FruitBlitzGame({
     e.preventDefault();
     if (gamePhase !== "playing") return;
     const s = stateRef.current;
-    if (!s.isSlashing) return;
+    if (!s.isSlashing || s.isGameOver) return;
+    
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
     const W = rect.width, H = rect.height;
@@ -549,6 +604,7 @@ export default function FruitBlitzGame({
     for (const item of s.items) {
       if (item.sliced) continue;
       if (!hitTest(pos.x, pos.y, item.x, item.y, item.radius, W, H)) continue;
+      
       item.sliced = true;
       item.splashTimer = 0;
 
@@ -558,7 +614,9 @@ export default function FruitBlitzGame({
         setDisplayLives(s.lives);
         setDisplayCombo(0);
         spawnParticles(item.x, item.y, "#ef4444", 14);
-        if (s.lives <= 0) killGame(s.score);
+        if (s.lives <= 0 && !s.isGameOver) {
+          endGame(s.score);
+        }
       } else {
         s.combo++;
         s.comboTimer = 100;
@@ -570,7 +628,7 @@ export default function FruitBlitzGame({
         spawnParticles(item.x, item.y, fd.splash, 12);
       }
     }
-  }, [gamePhase, getPos, hitTest, spawnParticles, killGame]);
+  }, [gamePhase, getPos, hitTest, spawnParticles, endGame]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
@@ -585,6 +643,7 @@ export default function FruitBlitzGame({
       style={{ height: "calc(100vh - 64px)" }}
     >
       <div
+        ref={canvasWrapperRef}
         className="relative overflow-hidden"
         style={{
           width: "min(420px, 100vw)",
@@ -604,6 +663,7 @@ export default function FruitBlitzGame({
             e.preventDefault();
             if (gamePhase !== "playing") return;
             const s = stateRef.current;
+            if (s.isGameOver) return;
             s.isSlashing = true;
             const pos = getPos(e as any);
             s.slashPoints = [{ ...pos, t: performance.now() }];
@@ -612,7 +672,8 @@ export default function FruitBlitzGame({
             e.preventDefault();
             if (gamePhase !== "playing") return;
             const s = stateRef.current;
-            if (!s.isSlashing) return;
+            if (!s.isSlashing || s.isGameOver) return;
+            
             const canvas = canvasRef.current!;
             const rect = canvas.getBoundingClientRect();
             const W = rect.width, H = rect.height;
@@ -622,6 +683,7 @@ export default function FruitBlitzGame({
             for (const item of s.items) {
               if (item.sliced) continue;
               if (!hitTest(pos.x, pos.y, item.x, item.y, item.radius, W, H)) continue;
+              
               item.sliced = true;
               item.splashTimer = 0;
 
@@ -631,7 +693,9 @@ export default function FruitBlitzGame({
                 setDisplayLives(s.lives);
                 setDisplayCombo(0);
                 spawnParticles(item.x, item.y, "#ef4444", 14);
-                if (s.lives <= 0) killGame(s.score);
+                if (s.lives <= 0 && !s.isGameOver) {
+                  endGame(s.score);
+                }
               } else {
                 s.combo++;
                 s.comboTimer = 100;
@@ -719,7 +783,7 @@ export default function FruitBlitzGame({
           />
         )}
 
-        {gamePhase === "playing" && stateRef.current.frame < 160 && (
+        {gamePhase === "playing" && stateRef.current.frame < 160 && !stateRef.current.isGameOver && (
           <div className="absolute bottom-5 left-0 right-0 flex justify-center pointer-events-none">
             <p className="font-mono-arc text-[9px] text-gray-700 uppercase tracking-widest">
               Swipe to slash fruits
