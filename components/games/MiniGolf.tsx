@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { GameProps } from "../../app/game/[gameId]/page";
 
-// Game constants
-const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 400;
+// Game constants - scaled for mobile
+const BASE_WIDTH = 600;
+const BASE_HEIGHT = 400;
 const BALL_RADIUS = 6;
 const HOLE_RADIUS = 8;
 const FRICTION = 0.98;
@@ -167,6 +167,7 @@ export default function DoodleMinGolfGame({
 }: GameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameLoopRef = useRef<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<
     Array<{
       x: number;
@@ -187,6 +188,8 @@ export default function DoodleMinGolfGame({
   const [isAiming, setIsAiming] = useState(false);
   const [showAim, setShowAim] = useState(false);
   const [combo, setCombo] = useState(0);
+  const [canvasSize, setCanvasSize] = useState({ width: BASE_WIDTH, height: BASE_HEIGHT });
+  const [scale, setScale] = useState(1);
   const [achievements, setAchievements] = useState<Achievement[]>([
     { id: "hole_in_one", name: "Ace!", unlocked: false },
     { id: "birdie_streak", name: "Birdie Streak", unlocked: false },
@@ -195,6 +198,7 @@ export default function DoodleMinGolfGame({
   ]);
   const [showAchievement, setShowAchievement] = useState<string | null>(null);
   const [slowMode, setSlowMode] = useState(false);
+  const [gameComplete, setGameComplete] = useState(false);
 
   const ballRef = useRef<Ball>({
     x: HOLES[0].ballStartX,
@@ -206,7 +210,32 @@ export default function DoodleMinGolfGame({
 
   const holeData = HOLES[currentHole];
   const totalHoles = HOLES.length;
-  const holesCompleted = currentHole;
+
+  // ─── Responsive Canvas ─────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const updateSize = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const containerWidth = container.clientWidth;
+      const maxWidth = Math.min(containerWidth, 600);
+      const aspectRatio = BASE_HEIGHT / BASE_WIDTH;
+      const width = Math.min(maxWidth, window.innerWidth - 32);
+      const height = width * aspectRatio;
+
+      // Calculate scale for coordinate transformations
+      const newScale = width / BASE_WIDTH;
+      setScale(newScale);
+      setCanvasSize({ width, height });
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  // ─── Particle System ──────────────────────────────────────────────────────
 
   const createParticles = useCallback((x: number, y: number, color: string) => {
     for (let i = 0; i < 8; i++) {
@@ -214,9 +243,9 @@ export default function DoodleMinGolfGame({
       particlesRef.current.push({
         x,
         y,
-        vx: Math.cos(angle) * 3,
-        vy: Math.sin(angle) * 3,
-        life: 1,
+        vx: Math.cos(angle) * (2 + Math.random() * 2),
+        vy: Math.sin(angle) * (2 + Math.random() * 2),
+        life: 0.8 + Math.random() * 0.4,
         color,
       });
     }
@@ -232,34 +261,37 @@ export default function DoodleMinGolfGame({
     setTimeout(() => setShowAchievement(null), 3000);
   }, []);
 
-  const draw = useCallback((ctx: CanvasRenderingContext2D) => {
-    // Background with gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+  // ─── Drawing ──────────────────────────────────────────────────────────────
+
+  const draw = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    // Clear with background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
     bgGrad.addColorStop(0, "#0a1f3f");
     bgGrad.addColorStop(0.5, "#1a3f5f");
     bgGrad.addColorStop(1, "#0f2a4f");
     ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillRect(0, 0, width, height);
 
     // Grid background
     ctx.strokeStyle = "rgba(34, 197, 94, 0.05)";
     ctx.lineWidth = 1;
-    for (let i = 0; i < CANVAS_WIDTH; i += 40) {
+    const gridSize = 40 * scale;
+    for (let i = 0; i < width; i += gridSize) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
-      ctx.lineTo(i, CANVAS_HEIGHT);
+      ctx.lineTo(i, height);
       ctx.stroke();
     }
-    for (let i = 0; i < CANVAS_HEIGHT; i += 40) {
+    for (let i = 0; i < height; i += gridSize) {
       ctx.beginPath();
       ctx.moveTo(0, i);
-      ctx.lineTo(CANVAS_WIDTH, i);
+      ctx.lineTo(width, i);
       ctx.stroke();
     }
 
     const ball = ballRef.current;
 
-    // Draw obstacles
+    // Draw obstacles with scaled coordinates
     holeData.obstacles.forEach((obs) => {
       const colors = {
         wall: { fill: "#7c3aed", glow: "rgba(124, 58, 237, 0.6)" },
@@ -267,19 +299,25 @@ export default function DoodleMinGolfGame({
         spike: { fill: "#ef4444", glow: "rgba(239, 68, 68, 0.6)" },
       };
 
+      const x = obs.x * scale;
+      const y = obs.y * scale;
+      const w = obs.width * scale;
+      const h = obs.height * scale;
+
       ctx.fillStyle = colors[obs.type].fill;
       ctx.shadowColor = colors[obs.type].glow;
-      ctx.shadowBlur = 15;
-      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      ctx.shadowBlur = 15 * scale;
+      ctx.fillRect(x, y, w, h);
 
       // Draw pattern on obstacles
       if (obs.type === "spike") {
         ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-        for (let i = obs.x; i < obs.x + obs.width; i += 10) {
+        const spikeSize = 10 * scale;
+        for (let i = x; i < x + w; i += spikeSize) {
           ctx.beginPath();
-          ctx.moveTo(i, obs.y);
-          ctx.lineTo(i + 5, obs.y + obs.height);
-          ctx.lineTo(i - 5, obs.y + obs.height);
+          ctx.moveTo(i, y);
+          ctx.lineTo(i + spikeSize / 2, y + h);
+          ctx.lineTo(i - spikeSize / 2, y + h);
           ctx.closePath();
           ctx.fill();
         }
@@ -287,143 +325,167 @@ export default function DoodleMinGolfGame({
     });
 
     // Draw hole
+    const holeX = holeData.holeX * scale;
+    const holeY = holeData.holeY * scale;
+    const holeRadius = HOLE_RADIUS * scale;
+    
     ctx.shadowColor = "rgba(34, 197, 94, 0.8)";
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 20 * scale;
     ctx.fillStyle = "#22c55e";
     ctx.beginPath();
-    ctx.arc(holeData.holeX, holeData.holeY, HOLE_RADIUS, 0, Math.PI * 2);
+    ctx.arc(holeX, holeY, holeRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hole inner glow
     ctx.fillStyle = "#16a34a";
     ctx.beginPath();
-    ctx.arc(holeData.holeX, holeData.holeY, HOLE_RADIUS - 2, 0, Math.PI * 2);
+    ctx.arc(holeX, holeY, holeRadius - 2 * scale, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw ball with glow
+    // Draw ball
+    const ballX = ball.x * scale;
+    const ballY = ball.y * scale;
+    const ballRadius = BALL_RADIUS * scale;
+    
     ctx.shadowColor = slowMode ? "#38bdf8" : "#fbbf24";
-    ctx.shadowBlur = 20;
-    const ballGrad = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, BALL_RADIUS);
+    ctx.shadowBlur = 20 * scale;
+    const ballGrad = ctx.createRadialGradient(
+      ballX - ballRadius * 0.3, ballY - ballRadius * 0.3, 0,
+      ballX, ballY, ballRadius
+    );
     ballGrad.addColorStop(0, slowMode ? "#38bdf8" : "#fbbf24");
     ballGrad.addColorStop(1, slowMode ? "#0284c7" : "#d97706");
     ctx.fillStyle = ballGrad;
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ball outline
     ctx.strokeStyle = slowMode ? "rgba(56, 189, 248, 0.8)" : "rgba(251, 191, 36, 0.8)";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * scale;
     ctx.stroke();
 
-    // Draw aiming line if aiming
+    // Draw aiming line
     if (showAim && !ball.isMoving) {
       ctx.strokeStyle = "rgba(147, 197, 253, 0.6)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 2 * scale;
+      ctx.setLineDash([5 * scale, 5 * scale]);
       ctx.beginPath();
-      ctx.moveTo(ball.x, ball.y);
-      const distance = 200;
+      ctx.moveTo(ballX, ballY);
+      const distance = 200 * scale;
       ctx.lineTo(
-        ball.x + Math.cos(angle) * distance,
-        ball.y + Math.sin(angle) * distance
+        ballX + Math.cos(angle) * distance,
+        ballY + Math.sin(angle) * distance
       );
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw power indicator
+      // Power indicator
+      const powerWidth = 60 * scale;
       ctx.fillStyle = `rgba(${Math.floor((power / MAX_POWER) * 255)}, ${Math.floor(
         ((MAX_POWER - power) / MAX_POWER) * 255
       )}, 100, 0.8)`;
-      ctx.fillRect(ball.x - 30, ball.y - 50, (power / MAX_POWER) * 60, 5);
+      ctx.fillRect(ballX - powerWidth / 2, ballY - 50 * scale, (power / MAX_POWER) * powerWidth, 5 * scale);
       ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(ball.x - 30, ball.y - 50, 60, 5);
+      ctx.lineWidth = 1 * scale;
+      ctx.strokeRect(ballX - powerWidth / 2, ballY - 50 * scale, powerWidth, 5 * scale);
     }
 
     // Draw particles
+    ctx.shadowBlur = 0;
     particlesRef.current = particlesRef.current.filter((p) => p.life > 0);
     particlesRef.current.forEach((p) => {
       ctx.fillStyle = p.color;
       ctx.globalAlpha = p.life;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.arc(p.x * scale, p.y * scale, 3 * scale * p.life, 0, Math.PI * 2);
       ctx.fill();
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.2;
+      p.x += p.vx * 0.5;
+      p.y += p.vy * 0.5;
+      p.vy += 0.1;
       p.life -= 0.02;
     });
     ctx.globalAlpha = 1;
 
-    // Draw HUD
+    // HUD
     ctx.shadowColor = "transparent";
-    ctx.font = "bold 14px 'Courier New', monospace";
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    const fontSize = Math.max(10, 14 * Math.min(1, scale * 1.2));
+    ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+    
     ctx.textAlign = "left";
-    ctx.fillText(`HOLE ${currentHole + 1}/${totalHoles}`, 20, 30);
-    ctx.fillText(`PAR ${holeData.par}`, 20, 50);
-    ctx.fillText(`STROKES: ${strokes}`, 20, 70);
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    const margin = 15 * scale;
+    let lineHeight = fontSize * 1.3;
+    let yPos = 20 * scale;
+    
+    ctx.fillText(`HOLE ${currentHole + 1}/${totalHoles}`, margin, yPos);
+    yPos += lineHeight;
+    ctx.fillText(`PAR ${holeData.par}`, margin, yPos);
+    yPos += lineHeight;
+    ctx.fillText(`STROKES: ${strokes}`, margin, yPos);
 
     // Score indicator
     const scoreVsPar = strokes - holeData.par;
-    let scoreColor = "#4ade80"; // Green = birdie or better
-    if (scoreVsPar === 0) scoreColor = "#f59e0b"; // Yellow = par
-    if (scoreVsPar > 0) scoreColor = "#ef4444"; // Red = bogey
+    let scoreColor = "#4ade80";
+    if (scoreVsPar === 0) scoreColor = "#f59e0b";
+    if (scoreVsPar > 0) scoreColor = "#ef4444";
 
-    ctx.font = "bold 16px 'Courier New', monospace";
-    ctx.fillStyle = scoreColor;
     ctx.textAlign = "right";
-    ctx.fillText(scoreVsPar === 0 ? "PAR" : scoreVsPar < 0 ? `${scoreVsPar}` : `+${scoreVsPar}`, CANVAS_WIDTH - 20, 30);
+    ctx.fillStyle = scoreColor;
+    const rightMargin = width - 20 * scale;
+    ctx.fillText(scoreVsPar === 0 ? "PAR" : scoreVsPar < 0 ? `${scoreVsPar}` : `+${scoreVsPar}`, rightMargin, 30 * scale);
 
-    // Total score
     ctx.fillStyle = "rgba(147, 197, 253, 0.9)";
-    ctx.fillText(`TOTAL: ${totalScore}`, CANVAS_WIDTH - 20, 50);
+    ctx.fillText(`TOTAL: ${totalScore}`, rightMargin, 50 * scale);
 
     // Combo
     if (combo > 0) {
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = "bold 14px 'Courier New', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(`${combo}x COMBO 🔥`, CANVAS_WIDTH / 2, 30);
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = `bold ${fontSize * 1.1}px 'Courier New', monospace`;
+      ctx.fillText(`${combo}x COMBO 🔥`, width / 2, 30 * scale);
     }
 
-    // Slow mode indicator
+    // Slow mode
     if (slowMode) {
-      ctx.fillStyle = "rgba(56, 189, 248, 0.9)";
-      ctx.font = "bold 12px 'Courier New', monospace";
       ctx.textAlign = "center";
-      ctx.fillText("⏱ SLOW MODE", CANVAS_WIDTH / 2, 60);
+      ctx.fillStyle = "rgba(56, 189, 248, 0.9)";
+      ctx.font = `bold ${fontSize * 0.9}px 'Courier New', monospace`;
+      ctx.fillText("⏱ SLOW MODE", width / 2, 60 * scale);
     }
 
     // Instructions
     if (!gameStarted) {
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = "20px 'Courier New', monospace";
+      const instructionFontSize = Math.max(14, 20 * Math.min(1, scale * 1.2));
+      ctx.font = `${instructionFontSize}px 'Courier New', monospace`;
       ctx.textAlign = "center";
-      ctx.fillText("CLICK TO AIM & SET POWER", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 40);
-      ctx.fillText("RELEASE TO SHOOT", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 20);
+      ctx.fillText("TAP TO AIM & SET POWER", width / 2, height / 2 - 40 * scale);
+      ctx.fillText("RELEASE TO SHOOT", width / 2, height / 2 + 20 * scale);
     }
 
-    // Game complete screen
-    if (currentHole === totalHoles && !ball.isMoving && strokes > 0) {
+    // Game complete
+    if (gameComplete) {
       ctx.fillStyle = "rgba(0,0,0,0.75)";
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.fillRect(0, 0, width, height);
 
-      ctx.font = "bold 32px 'Courier New', monospace";
+      const titleSize = Math.max(24, 32 * Math.min(1, scale * 1.2));
+      ctx.font = `bold ${titleSize}px 'Courier New', monospace`;
       ctx.fillStyle = "#4ade80";
       ctx.textAlign = "center";
-      ctx.fillText("COURSE COMPLETE!", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 60);
+      ctx.fillText("COURSE COMPLETE!", width / 2, height / 2 - 80 * scale);
 
-      ctx.font = "bold 24px 'Courier New', monospace";
+      const scoreSize = Math.max(18, 24 * Math.min(1, scale * 1.2));
+      ctx.font = `bold ${scoreSize}px 'Courier New', monospace`;
       ctx.fillStyle = "#fbbf24";
-      ctx.fillText(`SCORE: ${totalScore}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+      ctx.fillText(`SCORE: ${totalScore}`, width / 2, height / 2);
 
-      ctx.font = "16px 'Courier New', monospace";
+      const smallSize = Math.max(12, 16 * Math.min(1, scale * 1.2));
+      ctx.font = `${smallSize}px 'Courier New', monospace`;
       ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.fillText("CLICK TO PLAY AGAIN", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 60);
+      ctx.fillText("TAP TO PLAY AGAIN", width / 2, height / 2 + 60 * scale);
     }
-  }, [currentHole, holeData, strokes, totalScore, combo, slowMode, showAim, angle, power, gameStarted]);
+  }, [currentHole, holeData, strokes, totalScore, combo, slowMode, showAim, angle, power, gameStarted, gameComplete, scale]);
+
+  // ─── Game Loop ────────────────────────────────────────────────────────────
 
   const gameLoop = useCallback(() => {
     const canvas = canvasRef.current;
@@ -432,9 +494,11 @@ export default function DoodleMinGolfGame({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const width = canvas.width;
+    const height = canvas.height;
     const ball = ballRef.current;
 
-    // Apply friction
+    // Apply friction with slow mode
     if (Math.hypot(ball.vx, ball.vy) < 0.1) {
       ball.vx = 0;
       ball.vy = 0;
@@ -444,25 +508,25 @@ export default function DoodleMinGolfGame({
       ball.vx *= frictionMod;
       ball.vy *= frictionMod;
 
-      // Apply gravity-like effect
+      // Gravity-like effect
       ball.vy += 0.1;
 
-      // Update position
+      // Update position (in game coordinates)
       ball.x += ball.vx;
       ball.y += ball.vy;
     }
 
-    // Wall collision
-    if (ball.x - BALL_RADIUS < 0 || ball.x + BALL_RADIUS > CANVAS_WIDTH) {
+    // Wall collision (in game coordinates)
+    if (ball.x - BALL_RADIUS < 0 || ball.x + BALL_RADIUS > BASE_WIDTH) {
       ball.vx = -ball.vx * 0.8;
-      ball.x = Math.max(BALL_RADIUS, Math.min(CANVAS_WIDTH - BALL_RADIUS, ball.x));
+      ball.x = Math.max(BALL_RADIUS, Math.min(BASE_WIDTH - BALL_RADIUS, ball.x));
     }
-    if (ball.y - BALL_RADIUS < 0 || ball.y + BALL_RADIUS > CANVAS_HEIGHT) {
+    if (ball.y - BALL_RADIUS < 0 || ball.y + BALL_RADIUS > BASE_HEIGHT) {
       ball.vy = -ball.vy * 0.8;
-      ball.y = Math.max(BALL_RADIUS, Math.min(CANVAS_HEIGHT - BALL_RADIUS, ball.y));
+      ball.y = Math.max(BALL_RADIUS, Math.min(BASE_HEIGHT - BALL_RADIUS, ball.y));
     }
 
-    // Check obstacle collisions
+    // Obstacle collisions
     holeData.obstacles.forEach((obs) => {
       if (
         ball.x + BALL_RADIUS > obs.x &&
@@ -470,42 +534,27 @@ export default function DoodleMinGolfGame({
         ball.y + BALL_RADIUS > obs.y &&
         ball.y - BALL_RADIUS < obs.y + obs.height
       ) {
-        if (obs.type === "water") {
-          // Reset ball to start on water
+        if (obs.type === "water" || obs.type === "spike") {
+          // Reset ball to start
           ball.x = holeData.ballStartX;
           ball.y = holeData.ballStartY;
           ball.vx = 0;
           ball.vy = 0;
           setStrokes((prev) => prev + 1);
-          createParticles(holeData.ballStartX, holeData.ballStartY, "#0ea5e9");
-        } else if (obs.type === "spike") {
-          // Reset ball on spike
-          ball.x = holeData.ballStartX;
-          ball.y = holeData.ballStartY;
-          ball.vx = 0;
-          ball.vy = 0;
-          setStrokes((prev) => prev + 1);
-          createParticles(holeData.ballStartX, holeData.ballStartY, "#ef4444");
+          createParticles(holeData.ballStartX, holeData.ballStartY, 
+            obs.type === "water" ? "#0ea5e9" : "#ef4444"
+          );
         } else if (obs.type === "wall") {
-          // Bounce off wall
-          const ballCenterX = ball.x;
-          const ballCenterY = ball.y;
-
-          const closestX = Math.max(obs.x, Math.min(ballCenterX, obs.x + obs.width));
-          const closestY = Math.max(obs.y, Math.min(ballCenterY, obs.y + obs.height));
-
-          const distX = ballCenterX - closestX;
-          const distY = ballCenterY - closestY;
-          const dist = Math.hypot(distX, distY);
-
-          if (dist < BALL_RADIUS) {
-            const angle = Math.atan2(distY, distX);
-            ball.x = closestX + Math.cos(angle) * BALL_RADIUS;
-            ball.y = closestY + Math.sin(angle) * BALL_RADIUS;
-
-            const dotProduct = ball.vx * Math.cos(angle) + ball.vy * Math.sin(angle);
-            ball.vx = (Math.cos(angle) * dotProduct - Math.sin(angle) * (ball.vx * Math.sin(angle) - ball.vy * Math.cos(angle))) * 0.8;
-            ball.vy = (Math.sin(angle) * dotProduct + Math.cos(angle) * (ball.vx * Math.sin(angle) - ball.vy * Math.cos(angle))) * 0.8;
+          // Simple wall bounce
+          const overlapX = Math.min(ball.x + BALL_RADIUS - obs.x, obs.x + obs.width - (ball.x - BALL_RADIUS));
+          const overlapY = Math.min(ball.y + BALL_RADIUS - obs.y, obs.y + obs.height - (ball.y - BALL_RADIUS));
+          
+          if (overlapX < overlapY) {
+            ball.vx = -ball.vx * 0.8;
+            ball.x += (ball.x > obs.x + obs.width / 2) ? overlapX : -overlapX;
+          } else {
+            ball.vy = -ball.vy * 0.8;
+            ball.y += (ball.y > obs.y + obs.height / 2) ? overlapY : -overlapY;
           }
         }
       }
@@ -513,19 +562,18 @@ export default function DoodleMinGolfGame({
 
     // Check if ball is in hole
     const distToHole = Math.hypot(ball.x - holeData.holeX, ball.y - holeData.holeY);
-    if (distToHole < HOLE_RADIUS + BALL_RADIUS && !ball.isMoving) {
+    if (distToHole < HOLE_RADIUS + BALL_RADIUS && !ball.isMoving && !gameComplete) {
       createParticles(holeData.holeX, holeData.holeY, "#22c55e");
 
-      // Calculate score
       let holeScore = Math.max(0, 10 - (strokes - holeData.par) * 3);
       if (strokes === 1) {
-        holeScore = 50; // Hole in one bonus!
+        holeScore = 50;
         unlockAchievement("hole_in_one");
       } else if (strokes === holeData.par - 1) {
-        holeScore = 30; // Birdie bonus
+        holeScore = 30;
         setCombo((prev) => prev + 1);
       } else if (strokes === holeData.par) {
-        holeScore = 20; // Par
+        holeScore = 20;
         setCombo(0);
       } else {
         setCombo(0);
@@ -533,113 +581,170 @@ export default function DoodleMinGolfGame({
 
       setTotalScore((prev) => prev + holeScore);
 
-      // Move to next hole or complete game
       if (currentHole < totalHoles - 1) {
-        setCurrentHole((prev) => prev + 1);
+        const nextHole = currentHole + 1;
+        setCurrentHole(nextHole);
         setStrokes(0);
         ballRef.current = {
-          x: HOLES[currentHole + 1].ballStartX,
-          y: HOLES[currentHole + 1].ballStartY,
+          x: HOLES[nextHole].ballStartX,
+          y: HOLES[nextHole].ballStartY,
           vx: 0,
           vy: 0,
           isMoving: false,
         };
       } else {
-        // Game complete
-        if (totalScore >= 200) {
+        setGameComplete(true);
+        if (totalScore + holeScore >= 200) {
           unlockAchievement("perfect_9");
         }
-        onGameComplete(totalScore);
+        onGameComplete(totalScore + holeScore);
+        return;
       }
     }
 
-    draw(ctx);
+    draw(ctx, width, height);
     gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [draw, holeData, currentHole, strokes, totalScore, combo, slowMode, createParticles, unlockAchievement, onGameComplete]);
+  }, [draw, holeData, currentHole, strokes, totalScore, combo, slowMode, gameComplete, createParticles, unlockAchievement, onGameComplete]);
 
-  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  // ─── Input Handlers ──────────────────────────────────────────────────────
+
+  const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas || ballRef.current.isMoving) return;
+    if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    let clientX, clientY;
+
+    if ('touches' in e) {
+      const touch = e.touches[0] || e.changedTouches[0];
+      clientX = touch.clientX;
+      clientY = touch.clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    // Convert to game coordinates
+    const x = ((clientX - rect.left) / rect.width) * BASE_WIDTH;
+    const y = ((clientY - rect.top) / rect.height) * BASE_HEIGHT;
+
+    return { x, y };
+  }, []);
+
+  const handleCanvasInteraction = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    
+    if (gameComplete) {
+      // Reset game
+      setGameComplete(false);
+      setCurrentHole(0);
+      setTotalScore(0);
+      setStrokes(0);
+      setCombo(0);
+      setGameStarted(false);
+      setShowAim(false);
+      ballRef.current = {
+        x: HOLES[0].ballStartX,
+        y: HOLES[0].ballStartY,
+        vx: 0,
+        vy: 0,
+        isMoving: false,
+      };
+      return;
+    }
+
+    if (ballRef.current.isMoving) return;
+
+    const { x, y } = getCanvasCoords(e);
+    const ball = ballRef.current;
 
     if (!gameStarted) {
       setGameStarted(true);
       setShowAim(true);
+      setIsAiming(true);
+      const dx = x - ball.x;
+      const dy = y - ball.y;
+      setAngle(Math.atan2(dy, dx));
+      setPower(Math.min(MAX_POWER, Math.max(0, Math.hypot(dx, dy) / 3)));
       return;
     }
 
-    const dx = x - ballRef.current.x;
-    const dy = y - ballRef.current.y;
+    const dx = x - ball.x;
+    const dy = y - ball.y;
     const dist = Math.hypot(dx, dy);
 
-    if (dist < 60) {
-      // Clicked near ball - set aiming
+    if (!showAim || dist < 30) {
       setShowAim(true);
+      setIsAiming(true);
       setAngle(Math.atan2(dy, dx));
       setPower(Math.min(MAX_POWER, Math.max(0, dist / 3)));
-    } else if (showAim) {
-      // Shoot the ball
-      ballRef.current.vx = Math.cos(angle) * power;
-      ballRef.current.vy = Math.sin(angle) * power;
-      ballRef.current.isMoving = true;
+    } else {
+      // Shoot
+      ball.vx = Math.cos(angle) * power;
+      ball.vy = Math.sin(angle) * power;
+      ball.isMoving = true;
       setShowAim(false);
+      setIsAiming(false);
       setStrokes((prev) => prev + 1);
-      createParticles(ballRef.current.x, ballRef.current.y, "#fbbf24");
+      createParticles(ball.x, ball.y, "#fbbf24");
       setPower(0);
     }
-  }, [gameStarted, showAim, angle, power, createParticles]);
+  }, [gameStarted, showAim, angle, power, gameComplete, createParticles, getCanvasCoords]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!showAim || ballRef.current.isMoving) return;
+  const handlePointerMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!showAim || ballRef.current.isMoving || gameComplete) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const dx = x - ballRef.current.x;
-    const dy = y - ballRef.current.y;
+    const { x, y } = getCanvasCoords(e);
+    const ball = ballRef.current;
+    const dx = x - ball.x;
+    const dy = y - ball.y;
 
     setAngle(Math.atan2(dy, dx));
-    setPower(Math.min(MAX_POWER, Math.hypot(dx, dy) / 3));
-  }, [showAim]);
+    setPower(Math.min(MAX_POWER, Math.max(0, Math.hypot(dx, dy) / 3)));
+  }, [showAim, gameComplete, getCanvasCoords]);
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (gameStarted) {
+    if (gameStarted && !gameComplete) {
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
       gameLoopRef.current = requestAnimationFrame(gameLoop);
-      return () => cancelAnimationFrame(gameLoopRef.current);
+      return () => {
+        if (gameLoopRef.current) {
+          cancelAnimationFrame(gameLoopRef.current);
+        }
+      };
     }
-  }, [gameStarted, gameLoop]);
+  }, [gameStarted, gameComplete, gameLoop]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    draw(ctx);
-  }, [draw]);
+  // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="relative">
+    <div ref={containerRef} className="flex flex-col items-center gap-4 w-full max-w-[600px] mx-auto px-2">
+      <div className="relative w-full">
         <canvas
           ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          onClick={handleCanvasClick}
-          onMouseMove={handleMouseMove}
-          className="rounded-2xl shadow-2xl cursor-pointer border border-green-400/30 hover:border-green-400/60 transition-all"
-          style={{ background: "#0f0f1e" }}
+          width={canvasSize.width}
+          height={canvasSize.height}
+          onClick={handleCanvasInteraction}
+          onTouchStart={handleCanvasInteraction}
+          onTouchMove={handlePointerMove}
+          onMouseMove={handlePointerMove}
+          className="w-full rounded-2xl shadow-2xl touch-none cursor-pointer border border-green-400/30 hover:border-green-400/60 transition-all"
+          style={{ 
+            background: "#0f0f1e",
+            maxWidth: '100%',
+            height: 'auto',
+            aspectRatio: `${BASE_WIDTH}/${BASE_HEIGHT}`
+          }}
         />
 
         {/* Achievement Pop-up */}
         {showAchievement && (
-          <div className="absolute top-4 left-4 animate-pulse">
+          <div className="absolute top-4 left-4 animate-pulse pointer-events-none">
             <div
               className="px-4 py-3 rounded-lg border border-green-400/50 backdrop-blur-sm"
               style={{ background: "rgba(34, 197, 94, 0.1)" }}
@@ -655,37 +760,50 @@ export default function DoodleMinGolfGame({
         )}
       </div>
 
-      <div className="text-center">
-        <p className="font-mono-arc text-sm text-gray-400 uppercase tracking-wider mb-3">
-          Score: <span className="text-cyan-400 text-2xl font-bold">{totalScore}</span>
-        </p>
-        <p className="text-xs text-gray-500 mb-3">
-          Hole {currentHole + 1}/{totalHoles} | Strokes: {strokes} | Par: {holeData.par}
-        </p>
+      <div className="text-center w-full">
+        <div className="flex justify-center gap-6 mb-2">
+          <div>
+            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Score</p>
+            <p className="font-mono-arc text-xl font-bold text-cyan-400">{totalScore}</p>
+          </div>
+          <div className="w-px h-10 bg-gray-700"/>
+          <div>
+            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Hole</p>
+            <p className="font-mono-arc text-xl font-bold text-white">{currentHole + 1}/{totalHoles}</p>
+          </div>
+          <div className="w-px h-10 bg-gray-700"/>
+          <div>
+            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Strokes</p>
+            <p className="font-mono-arc text-xl font-bold text-yellow-400">{strokes}</p>
+          </div>
+        </div>
 
-        {/* Achievement Display */}
-        <div className="flex gap-2 justify-center flex-wrap">
+        {/* Achievements */}
+        <div className="flex gap-1 justify-center flex-wrap mb-2">
           {achievements.map((ach) => (
             <div
               key={ach.id}
-              className={`px-2 py-1 rounded text-[10px] font-mono-arc ${
+              className={`px-1.5 py-0.5 rounded text-[8px] font-mono-arc transition-all ${
                 ach.unlocked
                   ? "bg-green-500/20 text-green-400 border border-green-400/50"
                   : "bg-gray-500/10 text-gray-500 border border-gray-500/30"
               }`}
             >
-              {ach.unlocked ? "✓" : "○"} {ach.name}
+              {ach.unlocked ? "✓" : "○"}
             </div>
           ))}
         </div>
 
-        {currentHole === totalHoles && (
+        {gameComplete && (
           <button
             onClick={() => {
+              setGameComplete(false);
               setCurrentHole(0);
               setTotalScore(0);
               setStrokes(0);
               setCombo(0);
+              setGameStarted(false);
+              setShowAim(false);
               ballRef.current = {
                 x: HOLES[0].ballStartX,
                 y: HOLES[0].ballStartY,
@@ -694,7 +812,7 @@ export default function DoodleMinGolfGame({
                 isMoving: false,
               };
             }}
-            className="font-mono-arc text-xs font-bold uppercase tracking-wider px-6 py-2 rounded-lg mt-3 transition-all bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black"
+            className="font-mono-arc text-xs font-bold uppercase tracking-wider px-6 py-2 rounded-lg transition-all bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black shadow-lg shadow-green-500/25"
           >
             Play Again ↻
           </button>
