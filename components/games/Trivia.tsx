@@ -10,6 +10,12 @@ const QUESTIONS = [
     correct: 1,
     category: "Geography",
   },
+    {
+    question: "Who is the founder of Ethereum?",
+    options: ["Warren Buffet", "Vitalik", "Elon Musk", "Bernard Arnaut"],
+    correct: 2,
+    category: "Geography",
+  },
   {
     question: "Which planet is known as the Red Planet?",
     options: ["Venus", "Mars", "Jupiter", "Saturn"],
