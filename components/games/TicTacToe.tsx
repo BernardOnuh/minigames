@@ -158,9 +158,9 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
       setWinner(w);
       setGameOver(true);
       let pts = 0;
-      if (w === "X") { pts = 50; setResultText("You win!"); }
-      else if (w === "O") { pts = 10; setResultText("AI wins..."); }
-      else { pts = 25; setResultText("Draw!"); }
+      if (w === "X") { pts = 50; setResultText("Victory!"); }
+      else if (w === "O") { pts = 10; setResultText("Defeat..."); }
+      else { pts = 25; setResultText("Stalemate!"); }
       setScore(s => s + pts);
     }
   }, [board, phase]);
