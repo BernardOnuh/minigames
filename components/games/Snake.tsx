@@ -171,7 +171,7 @@ export default function SnakeGame({ gameConfig, onGameComplete, onGameFail }: Ga
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.strokeStyle = "rgba(34,197,94,0.06)";
+      ctx.strokeStyle = "rgba(34,197,94,0.08)";
     ctx.lineWidth = 0.5;
     for (let x = 0; x <= COLS; x++) {
       ctx.beginPath(); ctx.moveTo(x * cellSize, 0); ctx.lineTo(x * cellSize, H); ctx.stroke();
