@@ -517,7 +517,7 @@ export default function LobbyPage() {
         >
           <span className="font-mono-arc text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" style={{ boxShadow: "0 0 5px #4ade80" }} />
-            DB: <span className="text-violet-400">SUPABASE · LIVE</span>
+            DB: <span className="text-violet-400">ACTIVE</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
             PLAYERS: <span className="text-violet-400">{playerCount}</span>
