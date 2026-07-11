@@ -211,7 +211,7 @@ export default function TriviaGameEnhanced({ gameConfig, onGameComplete, onGameF
   const q = questions[qIdx];
   const totalQ = questions.length;
   const timePct = (timeLeft / 20) * 100;
-  const timeColor = timeLeft > 10 ? "#4ade80" : timeLeft > 5 ? "#f59e0b" : "#ef4444";
+  const timeColor = timeLeft > 12 ? "#4ade80" : timeLeft > 6 ? "#f59e0b" : "#ef4444";
   const isCorrect = selected === q?.c;
 
   // Timer
