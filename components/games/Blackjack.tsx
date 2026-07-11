@@ -263,7 +263,7 @@ export default function BlackjackGame({ gameConfig, onGameComplete }: GameProps)
             <p className="text-lg font-bold text-amber-400">${bank}</p>
           </div>
           <div className="text-center">
-            <p className="text-[9px] text-gray-500 uppercase tracking-widest">Bet</p>
+                <p className="text-[9px] text-gray-500 uppercase tracking-widest">Wager</p>
             <p className="text-lg font-bold text-cyan-400">${bet}</p>
           </div>
           <div className="text-center">
