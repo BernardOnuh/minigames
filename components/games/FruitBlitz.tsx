@@ -484,7 +484,7 @@ export default function FruitBlitzGame({ gameConfig, onGameComplete }: GameProps
           <div className="absolute top-16 left-0 right-0 flex justify-center pointer-events-none">
             <div key={displayCombo}
               className="font-mono-arc text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full"
-              style={{ background: "rgba(167,139,250,0.15)", border: "0.5px solid rgba(167,139,250,0.4)", color: "#c4b5fd", animation: "combo-pop 0.15s ease-out" }}
+              style={{ background: "rgba(251,191,36,0.15)", border: "0.5px solid rgba(251,191,36,0.4)", color: "#fbbf24", animation: "combo-pop 0.15s ease-out" }}
             >
               {displayCombo}x combo 🔥
             </div>
