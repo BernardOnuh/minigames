@@ -448,9 +448,9 @@ export default function FlappyBirdGameEnhanced({
     ctx.fill();
 
     const birdGrad = ctx.createRadialGradient(-5, -5, 0, 0, 0, 16);
-    birdGrad.addColorStop(0, shield ? "#86efac" : "#fcd34d");
+    birdGrad.addColorStop(0, shield ? "#86efac" : "#fde68a");
     birdGrad.addColorStop(0.7, shield ? "#22c55e" : "#f59e0b");
-    birdGrad.addColorStop(1, shield ? "#15803d" : "#d97706");
+    birdGrad.addColorStop(1, shield ? "#15803d" : "#b45309");
     ctx.fillStyle = birdGrad;
     ctx.shadowColor = glowColor;
     ctx.shadowBlur = 20;
