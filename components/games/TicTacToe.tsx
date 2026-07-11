@@ -221,7 +221,7 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
           <button onClick={startGame}
             className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-lg hover:from-purple-400 hover:to-pink-400 transition-all text-lg uppercase tracking-widest"
           >
-            Start Game
+            Play Now
           </button>
         </div>
       )}
