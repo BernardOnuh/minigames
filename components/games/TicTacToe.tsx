@@ -253,7 +253,7 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
             {board.map((cell, i) => (
               <button key={i} onClick={() => handleCellClick(i)}
                 disabled={gameOver || cell !== null || turn !== "X" || aiThinking}
-                className="w-full aspect-square rounded-xl text-3xl font-bold transition-all active:scale-95 flex items-center justify-center"
+                className="w-full aspect-square rounded-2xl text-3xl font-bold transition-all active:scale-95 flex items-center justify-center"
                 style={{
                   background: cell ? "rgba(167,139,250,0.08)" : "rgba(255,255,255,0.03)",
                   border: cell
