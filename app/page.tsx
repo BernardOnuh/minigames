@@ -969,9 +969,9 @@ export default function HomePage() {
         <div className="border-y border-white/[0.05] bg-black/20 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto grid grid-cols-3">
             {[
-              { num: playerCount,        label: "Online",   color: "#a78bfa" },
-              { num: `${games.length}`,  label: "Games",    color: "#38bdf8" },
-              { num: "Free",             label: "To join",  color: "#4ade80" },
+              { num: playerCount,        label: "Online",   color: "#c084fc" },
+              { num: `${games.length}`,  label: "Games",    color: "#22d3ee" },
+              { num: "Free",             label: "To play",  color: "#4ade80" },
             ].map((s, i) => (
               <div
                 key={s.label}
