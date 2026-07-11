@@ -532,7 +532,7 @@ export default function SnakeGame({ gameConfig, onGameComplete, onGameFail }: Ga
 
       {/* Score */}
       <div className="text-center w-full px-2">
-        <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider mb-1">Score</p>
+        <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-[0.15em] mb-1">Score</p>
         <p className="font-mono-arc text-3xl font-bold text-green-400 tabular-nums">{score}</p>
         <p className="font-mono-arc text-[9px] text-gray-600 mt-1">Length: {length}</p>
         <p className="font-mono-arc text-[8px] text-gray-700 mt-0.5 uppercase tracking-wider">{DIFFICULTIES[difficulty].label} mode</p>
