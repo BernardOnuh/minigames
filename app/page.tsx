@@ -918,7 +918,7 @@ export default function HomePage() {
               </p>
               <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight mb-3 sm:mb-5">
                 Play mini games.<br />
-                <span className="text-violet-400">Earn rewards.</span>{" "}
+                <span className="text-violet-400">Earn crypto.</span>{" "}
                 <span className="text-cyan-400">Own your stats.</span>
               </h1>
               <p className="text-[13px] sm:text-sm text-gray-500 leading-relaxed mb-5 sm:mb-7 max-w-md">
