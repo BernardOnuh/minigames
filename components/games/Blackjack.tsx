@@ -67,7 +67,7 @@ function CardView({ card, small }: { card: Card; small?: boolean }) {
     <div className={`rounded-lg flex flex-col items-center justify-center font-bold`}
       style={{
         width: small ? 40 : 48, height: small ? 56 : 64,
-        background: "rgba(255,255,255,0.06)",
+        background: "rgba(255,255,255,0.08)",
         border: "0.5px solid rgba(255,255,255,0.12)",
         borderRadius: 8,
         color: SUIT_COLOR[card.suit],
