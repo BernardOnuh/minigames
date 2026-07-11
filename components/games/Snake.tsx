@@ -183,7 +183,7 @@ export default function SnakeGame({ gameConfig, onGameComplete, onGameFail }: Ga
     // Food
     const fx = s.food.x * cellSize + cellSize / 2;
     const fy = s.food.y * cellSize + cellSize / 2;
-    const pulse = 1 + Math.sin(Date.now() / 200) * 0.12;
+    const pulse = 1 + Math.sin(Date.now() / 160) * 0.14;
     const foodGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, cellSize / 2 * pulse);
     foodGrad.addColorStop(0, "#fbbf24");
     foodGrad.addColorStop(0.6, "#f59e0b");
