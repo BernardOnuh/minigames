@@ -147,19 +147,26 @@ export async function fetchLiveMatch(): Promise<LiveMatch | null> {
 // ─── User profile & stats ─────────────────────────────────────────────────────
 
 export async function upsertUserProfile(wallet: string): Promise<void> {
-  const lower = wallet.toLowerCase();
+  const w = wallet.toLowerCase();
   const { error } = await supabase
     .from("user_profiles")
-    .upsert({ wallet: lower, updated_at: new Date().toISOString() }, { onConflict: "wallet", ignoreDuplicates: true });
+    .upsert({ wallet: w, updated_at: new Date().toISOString() }, { onConflict: "wallet", ignoreDuplicates: true });
 
   if (error) console.warn("upsertUserProfile:", error.message);
+
+  const { error: lbErr } = await supabase
+    .from("leaderboard_weekly")
+    .upsert({ wallet: w, xp: 0, earnings: 0, wins: 0, losses: 0, rank: 999 }, { onConflict: "wallet", ignoreDuplicates: true });
+
+  if (lbErr) console.warn("upsertUserProfile leaderboard:", lbErr.message);
 }
 
-export async function fetchUserStats(wallet: string): Promise<UserStats> {
+export async function fetchUserStats(rawWallet: string): Promise<UserStats> {
+  const wallet = rawWallet.toLowerCase();
   const { data, error } = await supabase
     .from("user_profiles")
     .select("xp, earnings, wins, losses")
-    .eq("wallet", wallet.toLowerCase())
+    .eq("wallet", wallet)
     .maybeSingle();
 
   if (error || !data) {

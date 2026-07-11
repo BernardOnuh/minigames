@@ -5,15 +5,55 @@ import type { GameProps } from "../../app/game/[gameId]/page";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GRAVITY = 0.35;
-const JUMP_STRENGTH = -8.5;
 const PIPE_WIDTH = 70;
-const PIPE_GAP = 160;
-const PIPE_SPACING = 320;
-const BASE_SPEED = 3.5;
-const MAX_SPEED = 6.5;
 const GAME_WIDTH = 500;
 const GAME_HEIGHT = 700;
+
+type Difficulty = "easy" | "medium" | "hard";
+
+type DifficultyConfig = {
+  label: string;
+  gravity: number;
+  jumpStrength: number;
+  pipeGap: number;
+  pipeSpacing: number;
+  baseSpeed: number;
+  maxSpeed: number;
+  xpMultiplier: number;
+};
+
+const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
+  easy: {
+    label: "Easy",
+    gravity: 0.25,
+    jumpStrength: -9,
+    pipeGap: 200,
+    pipeSpacing: 360,
+    baseSpeed: 2.5,
+    maxSpeed: 4.5,
+    xpMultiplier: 0.5,
+  },
+  medium: {
+    label: "Medium",
+    gravity: 0.35,
+    jumpStrength: -8.5,
+    pipeGap: 160,
+    pipeSpacing: 320,
+    baseSpeed: 3.5,
+    maxSpeed: 6.5,
+    xpMultiplier: 1,
+  },
+  hard: {
+    label: "Hard",
+    gravity: 0.45,
+    jumpStrength: -7.5,
+    pipeGap: 130,
+    pipeSpacing: 280,
+    baseSpeed: 4.5,
+    maxSpeed: 8,
+    xpMultiplier: 1.5,
+  },
+};
 
 type Bird = {
   y: number;
@@ -152,10 +192,12 @@ export default function FlappyBirdGameEnhanced({
   const gameLoopRef = useRef<number>(0);
   const particlesRef = useRef<Particle[]>([]);
   const frameCountRef = useRef(0);
-  const speedRef = useRef(BASE_SPEED);
+  const speedRef = useRef(DIFFICULTY_CONFIGS.medium.baseSpeed);
   const difficultyTimerRef = useRef(0);
   const isGameOverRef = useRef(false);
 
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [showDifficultySelect, setShowDifficultySelect] = useState(true);
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [gameOver, setGameOver] = useState(false);
@@ -193,6 +235,7 @@ export default function FlappyBirdGameEnhanced({
   const comboRef = useRef(0);
   const consecutivePassesRef = useRef(0);
   const bestComboRef = useRef(0);
+  const diffConfigRef = useRef<DifficultyConfig>(DIFFICULTY_CONFIGS.medium);
 
   // ─── Reset Game ─────────────────────────────────────────────────────────────
 
@@ -217,7 +260,8 @@ export default function FlappyBirdGameEnhanced({
     comboRef.current = 0;
     consecutivePassesRef.current = 0;
     bestComboRef.current = 0;
-    speedRef.current = BASE_SPEED;
+    diffConfigRef.current = DIFFICULTY_CONFIGS[difficulty];
+    speedRef.current = diffConfigRef.current.baseSpeed;
     difficultyTimerRef.current = 0;
     frameCountRef.current = 0;
 
@@ -227,6 +271,7 @@ export default function FlappyBirdGameEnhanced({
     setMultiplier(1);
     setGameOver(false);
     setGameStarted(false);
+    setShowDifficultySelect(true);
     setGamePhase("playing");
     setShield(false);
     setSlowMode(false);
@@ -235,7 +280,7 @@ export default function FlappyBirdGameEnhanced({
     setScreenShake(0);
     setFinalScore(0);
     setXpEarned(0);
-  }, []);
+  }, [difficulty]);
 
   // ─── End Game ───────────────────────────────────────────────────────────────
 
@@ -248,19 +293,15 @@ export default function FlappyBirdGameEnhanced({
     setGameOver(true);
     setGamePhase("results");
     
-    // Calculate XP based on score
-    const xp = Math.max(10, Math.floor((finalScoreValue / 10) * (gameConfig.base_xp ?? 75) / 100));
+    const config = DIFFICULTY_CONFIGS[difficulty];
+    const xp = Math.max(10, Math.floor((finalScoreValue / 1000) * (gameConfig.base_xp ?? 75) * config.xpMultiplier));
     setXpEarned(xp);
     
-    // Stop the game loop
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
       gameLoopRef.current = 0;
     }
-    
-    // Trigger failure callback
-    onGameFail();
-  }, [gameConfig.base_xp, onGameFail]);
+  }, [gameConfig.base_xp, difficulty]);
 
   // ─── Particle System ────────────────────────────────────────────────────────
 
@@ -459,6 +500,7 @@ export default function FlappyBirdGameEnhanced({
   }, [gameStarted, gameOver, shield]);
 
   const drawPipes = useCallback((ctx: CanvasRenderingContext2D, time: number) => {
+    const gap = diffConfigRef.current.pipeGap;
     pipeRef.current.forEach((pipe, index) => {
       const grad = ctx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_WIDTH, 0);
       const alpha = 0.8 + Math.sin(time * 0.001 + index) * 0.1;
@@ -484,19 +526,19 @@ export default function FlappyBirdGameEnhanced({
       ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(pipe.x + radius, pipe.gapY + PIPE_GAP - radius);
-      ctx.lineTo(pipe.x + PIPE_WIDTH - radius, pipe.gapY + PIPE_GAP - radius);
-      ctx.quadraticCurveTo(pipe.x + PIPE_WIDTH, pipe.gapY + PIPE_GAP - radius, pipe.x + PIPE_WIDTH, pipe.gapY + PIPE_GAP);
+      ctx.moveTo(pipe.x + radius, pipe.gapY + gap - radius);
+      ctx.lineTo(pipe.x + PIPE_WIDTH - radius, pipe.gapY + gap - radius);
+      ctx.quadraticCurveTo(pipe.x + PIPE_WIDTH, pipe.gapY + gap - radius, pipe.x + PIPE_WIDTH, pipe.gapY + gap);
       ctx.lineTo(pipe.x + PIPE_WIDTH, GAME_HEIGHT);
       ctx.lineTo(pipe.x, GAME_HEIGHT);
-      ctx.lineTo(pipe.x, pipe.gapY + PIPE_GAP);
-      ctx.quadraticCurveTo(pipe.x, pipe.gapY + PIPE_GAP - radius, pipe.x + radius, pipe.gapY + PIPE_GAP - radius);
+      ctx.lineTo(pipe.x, pipe.gapY + gap);
+      ctx.quadraticCurveTo(pipe.x, pipe.gapY + gap - radius, pipe.x + radius, pipe.gapY + gap - radius);
       ctx.fill();
 
       ctx.shadowBlur = 0;
       ctx.fillStyle = `rgba(16, 185, 129, ${0.05 + Math.sin(time * 0.002 + index) * 0.02})`;
       ctx.fillRect(pipe.x + 5, 0, 4, pipe.gapY);
-      ctx.fillRect(pipe.x + 5, pipe.gapY + PIPE_GAP, 4, GAME_HEIGHT - pipe.gapY - PIPE_GAP);
+      ctx.fillRect(pipe.x + 5, pipe.gapY + gap, 4, GAME_HEIGHT - pipe.gapY - gap);
     });
   }, []);
 
@@ -554,7 +596,7 @@ export default function FlappyBirdGameEnhanced({
     ctx.textAlign = "left";
     
     ctx.fillStyle = "rgba(0,0,0,0.3)";
-    ctx.roundRect(10, 10, 150, 90, 8);
+    ctx.roundRect(10, 10, 150, 110, 8);
     ctx.fill();
     
     ctx.fillStyle = "rgba(255,255,255,0.9)";
@@ -565,6 +607,12 @@ export default function FlappyBirdGameEnhanced({
     ctx.fillText(`🔥 ${comboRef.current}x`, 20, 62);
     ctx.fillText(`⭐ x${multiplier}`, 20, 86);
     
+    const dc = diffConfigRef.current;
+    const diffColors: Record<string, string> = { easy: "#4ade80", medium: "#fbbf24", hard: "#f87171" };
+    ctx.fillStyle = diffColors[difficulty] || "#9ca3af";
+    ctx.font = "11px 'Courier New', monospace";
+    ctx.fillText(`${dc.label.toUpperCase()}`, 20, 108);
+    
     if (multiplier > 1) {
       const colors = ["#f59e0b", "#f97316", "#ef4444", "#ec4899"];
       const colorIndex = Math.min(multiplier - 2, colors.length - 1);
@@ -574,7 +622,7 @@ export default function FlappyBirdGameEnhanced({
       ctx.fillText(`x${multiplier}`, GAME_WIDTH - 20, 40);
     }
     
-    let powerY = 110;
+    let powerY = 130;
     ctx.textAlign = "left";
     ctx.font = "12px 'Courier New', monospace";
     
@@ -592,9 +640,7 @@ export default function FlappyBirdGameEnhanced({
       ctx.fillStyle = "#f472b6";
       ctx.fillText("✖️ DOUBLE", 20, powerY);
     }
-  }, [shield, slowMode, doublePoints, multiplier]);
-
-  // ─── Main Game Loop ──────────────────────────────────────────────────────
+  }, [shield, slowMode, doublePoints, multiplier, difficulty]);
 
   const gameLoop = useCallback(() => {
     const canvas = canvasRef.current;
@@ -608,9 +654,10 @@ export default function FlappyBirdGameEnhanced({
     // ── Update ──────────────────────────────────────────────────────────────
 
     const bird = birdRef.current;
+    const dc = diffConfigRef.current;
     const currentSpeed = slowMode ? speedRef.current * 0.4 : speedRef.current;
     
-    const gravity = slowMode ? GRAVITY * 0.4 : GRAVITY;
+    const gravity = slowMode ? dc.gravity * 0.4 : dc.gravity;
     bird.velocity += gravity;
     bird.y += bird.velocity;
     bird.rotation = Math.min(Math.max(bird.velocity * 4, -30), 60);
@@ -681,7 +728,7 @@ export default function FlappyBirdGameEnhanced({
         const pipeRight = pipe.x + PIPE_WIDTH;
         
         if (birdRight > pipeLeft && birdLeft < pipeRight) {
-          if (bird.y - 13 < pipe.gapY || bird.y + 13 > pipe.gapY + PIPE_GAP) {
+          if (bird.y - 13 < pipe.gapY || bird.y + 13 > pipe.gapY + dc.pipeGap) {
             if (!shield) {
               pipe.passed = true;
               endGame();
@@ -705,9 +752,9 @@ export default function FlappyBirdGameEnhanced({
     // ── Spawn Pipes ───────────────────────────────────────────────────────
 
     const lastPipe = pipeRef.current[pipeRef.current.length - 1];
-    if (!lastPipe || lastPipe.x < GAME_WIDTH - PIPE_SPACING) {
-      const minGap = 150;
-      const maxGap = PIPE_GAP;
+    if (!lastPipe || lastPipe.x < GAME_WIDTH - dc.pipeSpacing) {
+      const minGap = Math.max(dc.pipeGap - 30, 100);
+      const maxGap = dc.pipeGap;
       const gapSize = minGap + (maxGap - minGap) * (1 - Math.min(scoreRef.current / 200, 0.3));
       const gapY = Math.random() * (GAME_HEIGHT - gapSize - 80) + 40;
       
@@ -826,13 +873,13 @@ export default function FlappyBirdGameEnhanced({
     drawHUD(ctx);
 
     difficultyTimerRef.current += 1;
-    if (difficultyTimerRef.current % 60 === 0 && speedRef.current < MAX_SPEED) {
-      speedRef.current = Math.min(speedRef.current + 0.02, MAX_SPEED);
+    if (difficultyTimerRef.current % 60 === 0 && speedRef.current < dc.maxSpeed) {
+      speedRef.current = Math.min(speedRef.current + 0.02, dc.maxSpeed);
     }
 
     // ── Draw Overlays ────────────────────────────────────────────────────
 
-    if (!gameStarted) {
+    if (!gameStarted && !showDifficultySelect) {
       ctx.fillStyle = "rgba(0,0,0,0.5)";
       ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
       
@@ -864,7 +911,7 @@ export default function FlappyBirdGameEnhanced({
     gameStarted, gameOver, shield, slowMode, doublePoints, multiplier,
     createParticles, createTrail, handleCombo, unlockAchievement,
     drawBackground, drawPipes, drawPowerUps, drawBird, drawHUD,
-    highScore, screenShake, endGame
+    highScore, screenShake, endGame, showDifficultySelect
   ]);
 
   // ─── Input Handlers ──────────────────────────────────────────────────────
@@ -875,10 +922,12 @@ export default function FlappyBirdGameEnhanced({
       return;
     }
 
+    const dc = DIFFICULTY_CONFIGS[difficulty];
+
     if (!gameStarted) {
-      // Start game
       setGameStarted(true);
-      birdRef.current.velocity = JUMP_STRENGTH;
+      setShowDifficultySelect(false);
+      birdRef.current.velocity = dc.jumpStrength;
       scoreRef.current = 0;
       setScore(0);
       comboRef.current = 0;
@@ -886,7 +935,8 @@ export default function FlappyBirdGameEnhanced({
       setMultiplier(1);
       consecutivePassesRef.current = 0;
       bestComboRef.current = 0;
-      speedRef.current = BASE_SPEED;
+      diffConfigRef.current = dc;
+      speedRef.current = dc.baseSpeed;
       difficultyTimerRef.current = 0;
       pipeRef.current = [];
       setPowerUps([]);
@@ -900,20 +950,19 @@ export default function FlappyBirdGameEnhanced({
       }
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     } else if (!gameOver) {
-      birdRef.current.velocity = JUMP_STRENGTH * (slowMode ? 0.8 : 1);
+      birdRef.current.velocity = dc.jumpStrength * (slowMode ? 0.8 : 1);
       createParticles(60, birdRef.current.y, "#38bdf8", 8, "sparkle");
     } else {
-      // Reset game for retry
       resetGame();
-      // Start again immediately
       setGameStarted(true);
-      birdRef.current.velocity = JUMP_STRENGTH;
+      setShowDifficultySelect(false);
+      birdRef.current.velocity = dc.jumpStrength;
       if (gameLoopRef.current) {
         cancelAnimationFrame(gameLoopRef.current);
       }
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     }
-  }, [gameStarted, gameOver, slowMode, createParticles, gameLoop, resetGame, gamePhase]);
+  }, [gameStarted, gameOver, slowMode, createParticles, gameLoop, resetGame, gamePhase, difficulty]);
 
   // ─── Effects ─────────────────────────────────────────────────────────────
 
@@ -942,6 +991,65 @@ export default function FlappyBirdGameEnhanced({
           className="rounded-2xl shadow-2xl cursor-pointer border border-cyan-400/30 hover:border-cyan-400/60 transition-all"
           style={{ background: "#0f0f1e" }}
         />
+        
+        {/* Difficulty Selector */}
+        {showDifficultySelect && !gameStarted && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6"
+            style={{ background: "rgba(10,6,25,0.95)" }}
+          >
+            <div style={{ fontSize: 56 }}>🐦</div>
+            <p className="font-mono-arc text-lg font-bold text-amber-400 uppercase tracking-wider" style={{ textShadow: "0 0 20px rgba(251,191,36,0.4)" }}>
+              Flappy Bird
+            </p>
+            <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em]">Select difficulty</p>
+            <div className="flex gap-3">
+              {(["easy", "medium", "hard"] as Difficulty[]).map((d) => {
+                const config = DIFFICULTY_CONFIGS[d];
+                const selected = difficulty === d;
+                return (
+                  <button
+                    key={d}
+                    onClick={() => setDifficulty(d)}
+                    className={`px-5 py-3 rounded-lg font-mono-arc text-xs font-bold uppercase tracking-wider transition-all ${
+                      selected
+                        ? "scale-110"
+                        : "opacity-50 hover:opacity-80"
+                    }`}
+                    style={{
+                      background: selected
+                        ? d === "easy" ? "linear-gradient(135deg,#22c55e,#4ade80)"
+                          : d === "medium" ? "linear-gradient(135deg,#f59e0b,#fbbf24)"
+                          : "linear-gradient(135deg,#ef4444,#f87171)"
+                        : "rgba(255,255,255,0.05)",
+                      border: selected ? "none" : "0.5px solid rgba(255,255,255,0.12)",
+                      color: selected ? "#000" : "#9ca3af",
+                      boxShadow: selected ? "0 0 20px rgba(167,139,250,0.3)" : "none",
+                    }}
+                  >
+                    <p className="text-xs font-bold">{config.label}</p>
+                    <p className="text-[8px] opacity-60 mt-0.5">
+                      {d === "easy" ? "Relaxed" : d === "medium" ? "Balanced" : "Intense"}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleJump}
+              className="font-mono-arc text-xs font-bold uppercase tracking-widest px-8 py-3 rounded-lg transition-all hover:opacity-90 active:scale-95 mt-4"
+              style={{
+                background: "linear-gradient(135deg,#7c3aed,#a78bfa)",
+                color: "#fff",
+                boxShadow: "0 0 24px rgba(167,139,250,0.3)",
+              }}
+            >
+              Start Game →
+            </button>
+            <p className="font-mono-arc text-[8px] text-gray-600 mt-2">
+              or press Space
+            </p>
+          </div>
+        )}
         
         {/* XP Claim Screen Overlay */}
         {gamePhase === "results" && (

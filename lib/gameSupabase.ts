@@ -7,10 +7,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Types
 export type GameResult = {
-    id?: number;  // ← was string, change to number
+    id?: number;
     wallet: string;
     game_id: string;
-    game_title: string;
     score: number;
     xp_earned: number;
     duration_seconds: number;
@@ -51,31 +50,25 @@ export type LeaderboardEntry = {
 // ─── Game Session Management ───────────────────────────────────────────────
 
 export async function startGameSession(
-  wallet: string,
-  gameId: string,
-  gameTitle: string
+  rawWallet: string,
+  gameSlug: string,
 ) {
-  const { data, error } = await supabase
-    .from("game_results")
-    .insert([
-      {
-        wallet,
-        game_id: gameId,
-        game_title: gameTitle,
-        score: 0,
-        xp_earned: 0,
-        duration_seconds: 0,
-        status: "playing",
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error starting game session:", error);
+  try {
+    const res = await fetch("/api/game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "start", wallet: rawWallet, gameSlug }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error("Error starting game session:", json.error);
+      return null;
+    }
+    return json.session as GameResult;
+  } catch (e) {
+    console.error("Error starting game session:", e);
     return null;
   }
-  return data;
 }
 
 /**
@@ -88,26 +81,22 @@ export async function completeGameResult(
   durationSeconds: number,
   baseXp: number = 50
 ) {
-  // Calculate XP based on score
-  const xpEarned = Math.max(10, Math.floor((finalScore / 1000) * baseXp));
-
-  const { data, error } = await supabase
-    .from("game_results")
-    .update({
-      status: "completed",
-      score: finalScore,
-      xp_earned: xpEarned,
-      duration_seconds: durationSeconds,
-    })
-    .eq("id", resultId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error completing game result:", error);
+  try {
+    const res = await fetch("/api/game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "complete", resultId, score: finalScore, duration: durationSeconds, baseXp }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error("Error completing game:", json.error);
+      return null;
+    }
+    return json.result as GameResult;
+  } catch (e) {
+    console.error("Error completing game:", e);
     return null;
   }
-  return data;
 }
 
 /**
@@ -115,24 +104,23 @@ export async function completeGameResult(
  */
 export async function failGameResult(
   resultId: number,
-  metadata?: Record<string, any>
 ) {
-  const { data, error } = await supabase
-    .from("game_results")
-    .update({
-      status: "failed",
-      xp_earned: 0,
-      metadata: metadata || {},
-    })
-    .eq("id", resultId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error failing game result:", error);
+  try {
+    const res = await fetch("/api/game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "fail", resultId }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error("Error failing game:", json.error);
+      return null;
+    }
+    return json.result as GameResult;
+  } catch (e) {
+    console.error("Error failing game:", e);
     return null;
   }
-  return data;
 }
 
 // ─── User Profile ─────────────────────────────────────────────────────────
@@ -144,11 +132,12 @@ export async function upsertUserProfile(
   wallet: string,
   username?: string
 ) {
+  const w = wallet.toLowerCase();
   const { data, error } = await supabase
     .from("user_profiles")
     .upsert({
-      wallet,
-      username: username || wallet.slice(0, 6) + "...",
+      wallet: w,
+      username: username || w.slice(0, 6) + "...",
     }, { onConflict: "wallet" })
     .select()
     .single();
@@ -278,7 +267,7 @@ export async function fetchGameLeaderboard(
 ) {
   const { data, error } = await supabase
     .from("game_results")
-    .select("wallet, score, xp_earned, created_at, game_title")
+    .select("wallet, score, xp_earned, created_at")
     .eq("game_id", gameId)
     .eq("status", "completed")
     .order("score", { ascending: false })

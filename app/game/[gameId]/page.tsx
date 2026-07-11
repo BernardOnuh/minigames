@@ -80,8 +80,7 @@ export default function GamePage({ params }: GamePageProps) {
 
           const session = await startGameSession(
             activeAddress,
-            config.game_id,
-            config.game_title
+            config.game_id
           );
           if (session) {
             setGameSession(session);
@@ -125,9 +124,7 @@ export default function GamePage({ params }: GamePageProps) {
   const handleGameFail = useCallback(async () => {
     if (!gameSession) return;
 
-    await failGameResult(gameSession.id!, {
-      failed_at: new Date().toISOString(),
-    });
+    await failGameResult(gameSession.id!);
 
     router.push(`/game/${gameId}/results?status=failed`);
   }, [gameSession, gameId, router]);

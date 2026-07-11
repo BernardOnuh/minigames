@@ -5,31 +5,22 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { ethers } from "ethers";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import {
+  fetchGames,
+  fetchLeaderboard,
+  fetchUserStats,
+  fetchPlayerCount,
+  shortenWallet,
+  type Game,
+  type LeaderboardEntry,
+  type UserStats,
+} from "../lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type GameType = "all" | "arcade" | "multi" | "trivia";
 type ConnectStep = "idle" | "connecting" | "success";
 type OnboardStatus = "pending" | "dripping" | "done" | "error";
-
-interface Game {
-  id: string;
-  title: string;
-  type: Exclude<GameType, "all">;
-  icon: string;
-  reward: string;
-  players: string;
-  thumbBg: string;
-}
-
-interface LeaderboardEntry {
-  name: string;
-  initials: string;
-  xp: string;
-  coins: string;
-  avatarColor: string;
-  avatarText: string;
-}
 
 interface HudStat {
   label: string;
@@ -48,10 +39,13 @@ const NETWORK_CONFIG = {
   displayName: "ETHEREUM MAINNET",
   usdmTokenAddress: process.env.NEXT_PUBLIC_USDM_TOKEN_ADDRESS || "0x...",
   gameContractAddress: process.env.NEXT_PUBLIC_GAME_CONTRACT_ADDRESS || "0x...",
-  backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.minigame.com",
 };
 
 // ─── API Services ─────────────────────────────────────────────────────────────
+// Games, leaderboard, player stats, and player count now come from lib/supabase
+// (the same source the lobby page uses) instead of the old api.minigame.com
+// placeholder backend. Only price/block data — which have nothing to do with
+// Supabase — stay as direct fetches here.
 
 async function fetchUSDmPrice(): Promise<string> {
   try {
@@ -72,97 +66,6 @@ async function fetchBlockNumber(): Promise<string> {
     return `#${blockNumber.toLocaleString()}`;
   } catch {
     return "#N/A";
-  }
-}
-
-async function fetchGames(): Promise<Game[]> {
-  try {
-    const response = await fetch(`${NETWORK_CONFIG.backendUrl}/api/games`, {
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!response.ok) throw new Error("Failed to fetch games");
-    const games = await response.json();
-    return games.map((game: any) => ({
-      id: game.id,
-      title: game.title,
-      type: game.type,
-      icon: game.icon,
-      reward: game.reward,
-      players: game.activePlayers?.toString() || "0 playing",
-      thumbBg: game.thumbBg || "linear-gradient(135deg,#100c2e,#1e1557)",
-    }));
-  } catch {
-    return [];
-  }
-}
-
-async function fetchLeaderboard(): Promise<LeaderboardEntry[]> {
-  try {
-    const response = await fetch(
-      `${NETWORK_CONFIG.backendUrl}/api/leaderboard?limit=5&period=weekly`,
-      { headers: { "Content-Type": "application/json" } }
-    );
-    if (!response.ok) throw new Error("Failed to fetch leaderboard");
-    const entries = await response.json();
-    return entries.map((entry: any) => ({
-      name: entry.username,
-      initials: entry.username.charAt(0).toUpperCase(),
-      xp: `${entry.xp.toLocaleString()} XP`,
-      coins: `${entry.earnings.toLocaleString()} USDm`,
-      avatarColor: entry.avatarColor,
-      avatarText: entry.avatarTextColor,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-async function fetchUserStats(walletAddress: string): Promise<{
-  xp: string;
-  earnings: string;
-  winRate: string;
-}> {
-  try {
-    const response = await fetch(
-      `${NETWORK_CONFIG.backendUrl}/api/users/${walletAddress}/stats`,
-      { headers: { "Content-Type": "application/json" } }
-    );
-    if (!response.ok) throw new Error("Failed to fetch user stats");
-    const stats = await response.json();
-    return {
-      xp: stats.xp.toLocaleString(),
-      earnings: `${stats.earnings.toLocaleString()} USDm`,
-      winRate: `${Math.round((stats.wins / (stats.wins + stats.losses)) * 100)}%`,
-    };
-  } catch {
-    return { xp: "—", earnings: "— USDm", winRate: "—" };
-  }
-}
-
-async function fetchPlayerCount(): Promise<string> {
-  try {
-    const response = await fetch(`${NETWORK_CONFIG.backendUrl}/api/stats/players`, {
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!response.ok) throw new Error();
-    const data = await response.json();
-    return data.active.toLocaleString();
-  } catch {
-    return "—";
-  }
-}
-
-async function fetchTotalDistributed(): Promise<string> {
-  try {
-    const response = await fetch(
-      `${NETWORK_CONFIG.backendUrl}/api/stats/total-distributed`,
-      { headers: { "Content-Type": "application/json" } }
-    );
-    if (!response.ok) throw new Error();
-    const data = await response.json();
-    return `${(data.total / 1000).toFixed(0)}K`;
-  } catch {
-    return "—";
   }
 }
 
@@ -187,9 +90,7 @@ function useMiniPay() {
     : undefined;
 
   const address = miniPayWallet?.address ?? null;
-  const shortAddress = address
-    ? `${address.slice(0, 6)}…${address.slice(-4)}`
-    : null;
+  const shortAddress = address ? shortenWallet(address) : null;
 
   return { isMiniPay, address, shortAddress, wallet: miniPayWallet ?? null };
 }
@@ -310,7 +211,7 @@ function ConnectModal({
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget && !dripping) onClose(); }}
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-4"
       style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
     >
       {/* ── Connecting state */}
@@ -489,7 +390,7 @@ function WalletDropdown({
   shortAddress: string;
   walletTypeLabel: string | null;
   isMiniPay: boolean;
-  userStats: { xp: string; earnings: string; winRate: string } | null;
+  userStats: UserStats | null;
   onLogout: () => void;
   onClose: () => void;
 }) {
@@ -578,7 +479,7 @@ function WalletDropdown({
 
 // ─── GameCard ─────────────────────────────────────────────────────────────────
 
-function GameCard({ game }: { game: Game }) {
+function GameCard({ game, onPlay }: { game: Game; onPlay: (gameId: string) => void }) {
   const TAG_STYLES: Record<Exclude<GameType, "all">, string> = {
     arcade: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
     multi:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
@@ -589,17 +490,33 @@ function GameCard({ game }: { game: Game }) {
   };
 
   return (
-    <div className="group flex flex-col glass-card cursor-pointer border-white/[0.06] hover:border-violet-500/30 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-      <div className="h-16 flex items-center justify-center text-2xl flex-shrink-0" style={{ background: game.thumbBg }} />
-      <div className="p-3 flex flex-col gap-2 flex-grow">
-        <p className="font-mono-arc text-xs font-bold text-gray-100 uppercase tracking-wider">{game.title}</p>
+    <div
+      onClick={() => onPlay(game.gameId)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onPlay(game.gameId); }}
+      className="group flex flex-col glass-card cursor-pointer border-white/[0.06] active:scale-[0.98] hover:border-violet-500/30 transition-all duration-200 hover:-translate-y-1 overflow-hidden"
+    >
+      <div
+        className="relative h-14 sm:h-16 flex items-center justify-center flex-shrink-0 overflow-hidden"
+        style={{ background: game.thumbBg }}
+      >
+        {/* soften the flat swatch so it reads as a backdrop, not a color chip */}
+        <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.16), transparent 60%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 100%)" }} />
+        <span className="relative text-2xl sm:text-3xl drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]" role="img" aria-label={game.title}>
+          {game.icon}
+        </span>
+      </div>
+      <div className="p-2.5 sm:p-3 flex flex-col gap-1.5 sm:gap-2 flex-grow">
+        <p className="font-mono-arc text-[11px] sm:text-xs font-bold text-gray-100 uppercase tracking-wider leading-tight">{game.title}</p>
         <div className="flex items-center justify-between gap-1">
-          <span className={`font-mono-arc text-[10px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${TAG_STYLES[game.type]}`}>
+          <span className={`font-mono-arc text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${TAG_STYLES[game.type]}`}>
             {TAG_LABELS[game.type]}
           </span>
-          <span className="font-mono-arc text-[10px] text-amber-400">{game.reward}</span>
+          <span className="font-mono-arc text-[9px] sm:text-[10px] text-amber-400">{game.reward}</span>
         </div>
-        <p className="font-mono-arc text-[10px] text-gray-600 mt-auto">{game.players}</p>
+        <p className="font-mono-arc text-[9px] sm:text-[10px] text-gray-600 mt-auto">{game.players}</p>
       </div>
     </div>
   );
@@ -610,19 +527,18 @@ function GameCard({ game }: { game: Game }) {
 function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   const RANK_COLORS = ["#fbbf24", "#94a3b8", "#c4704f", "#64748b", "#64748b"];
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] px-2 -mx-2 transition-colors">
+    <div className="flex items-center gap-2.5 sm:gap-3 py-2 sm:py-2.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] px-2 -mx-2 transition-colors">
       <span className="font-mono-arc text-xs w-5 flex-shrink-0 font-bold" style={{ color: RANK_COLORS[rank] }}>
         {String(rank + 1).padStart(2, "0")}
       </span>
       <div
-        className="w-7 h-7 rounded-sm flex items-center justify-center font-mono-arc text-xs font-bold flex-shrink-0"
+        className="w-6 h-6 sm:w-7 sm:h-7 rounded-sm flex items-center justify-center font-mono-arc text-[11px] sm:text-xs font-bold flex-shrink-0"
         style={{ background: entry.avatarColor, color: entry.avatarText }}
       >
         {entry.initials}
       </div>
-      <span className="font-mono-arc text-xs text-gray-200 flex-1 truncate">{entry.name}</span>
-      <span className="font-mono-arc text-[11px] text-violet-400 flex-shrink-0">{entry.xp}</span>
-      <span className="font-mono-arc text-[11px] text-amber-400 flex-shrink-0 min-w-[72px] text-right">{entry.coins}</span>
+      <span className="font-mono-arc text-[11px] sm:text-xs text-gray-200 flex-1 truncate">{entry.name}</span>
+      <span className="font-mono-arc text-[10px] sm:text-[11px] text-violet-400 flex-shrink-0 min-w-[60px] sm:min-w-[72px] text-right">{entry.xp}</span>
     </div>
   );
 }
@@ -637,7 +553,7 @@ function HudPanel({
   embeddedWalletAddress: string | null;
   isMiniPay: boolean;
   miniPayAddress: string | null;
-  userStats: { xp: string; earnings: string; winRate: string } | null;
+  userStats: UserStats | null;
   onConnect: () => void;
 }) {
   const rawAddress = isMiniPay ? miniPayAddress : embeddedWalletAddress ?? walletAddress;
@@ -645,33 +561,45 @@ function HudPanel({
 
   const stats: HudStat[] = authenticated
     ? [
-        { label: "Your XP",      val: userStats?.xp       ?? "—", color: "#a78bfa", pct: 62 },
-        { label: "USDm balance", val: userStats?.earnings  ?? "—", color: "#38bdf8", pct: 34 },
-        { label: "Win rate",     val: userStats?.winRate   ?? "—", color: "#4ade80", pct: 63 },
+        { label: "Your XP",      val: userStats?.xp       ?? "0", color: "#a78bfa", pct: userStats?.xpPct       ?? 0 },
+        { label: "USDm balance", val: userStats?.earnings  ?? "0 USDm", color: "#38bdf8", pct: userStats?.earningsPct ?? 0 },
+        { label: "Win rate",     val: userStats?.winRate   ?? "0%", color: "#4ade80", pct: userStats?.winPct      ?? 0 },
       ]
     : [
-        { label: "Your XP",      val: "—", color: "#374151", pct: 0 },
-        { label: "USDm balance", val: "—", color: "#374151", pct: 0 },
-        { label: "Win rate",     val: "—", color: "#374151", pct: 0 },
+        { label: "Your XP",      val: "0", color: "#374151", pct: 0 },
+        { label: "USDm balance", val: "0 USDm", color: "#374151", pct: 0 },
+        { label: "Win rate",     val: "0%", color: "#374151", pct: 0 },
       ];
 
   return (
-    <div className="glass-card p-4 border-violet-500/15 relative overflow-hidden">
+    <div className="glass-card p-3.5 sm:p-4 border-violet-500/15 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
       <p className="font-mono-arc text-[9px] text-cyan-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
         Live stats
         <span className="flex-1 h-px bg-cyan-400/15 inline-block" />
       </p>
 
-      {stats.map(({ label, val, color, pct }) => (
-        <div key={label} className="mb-3">
-          <p className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider mb-1">{label}</p>
-          <p className="font-mono-arc text-lg font-bold leading-none" style={{ color }}>{val}</p>
-          <div className="h-px bg-white/[0.05] mt-2">
-            <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+      {/* Mobile: compact 3-up row. Desktop: stacked bars. */}
+      <div className="grid grid-cols-3 gap-2 sm:hidden mb-1">
+        {stats.map(({ label, val, color }) => (
+          <div key={label} className="text-center rounded-lg py-2" style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.06)" }}>
+            <p className="font-mono-arc text-sm font-bold leading-none" style={{ color }}>{val}</p>
+            <p className="font-mono-arc text-[8px] text-gray-600 uppercase tracking-wider mt-1 leading-tight">{label}</p>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+
+      <div className="hidden sm:block">
+        {stats.map(({ label, val, color, pct }) => (
+          <div key={label} className="mb-3">
+            <p className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider mb-1">{label}</p>
+            <p className="font-mono-arc text-lg font-bold leading-none" style={{ color }}>{val}</p>
+            <div className="h-px bg-white/[0.05] mt-2">
+              <div className="h-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="mt-3 pt-3 border-t border-white/[0.05]">
         <p className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider">Wallet</p>
@@ -692,7 +620,7 @@ function HudPanel({
             <p className="font-mono-arc text-[10px] text-gray-700 mt-1 mb-3">Not connected</p>
             <button
               onClick={onConnect}
-              className="font-mono-arc text-[10px] w-full py-2 rounded-sm font-bold uppercase tracking-wider transition-all hover:opacity-90"
+              className="font-mono-arc text-[10px] w-full py-2 rounded-sm font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
               style={{ background: "#a78bfa", color: "#000" }}
             >
               Connect wallet
@@ -717,10 +645,10 @@ export default function HomePage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [usdmPrice, setUsdmPrice] = useState<string>("$1.00");
   const [blockNumber, setBlockNumber] = useState<string>("#N/A");
-  const [playerCount, setPlayerCount] = useState<string>("—");
-  const [totalDistributed, setTotalDistributed] = useState<string>("—");
-  const [userStats, setUserStats] = useState<{ xp: string; earnings: string; winRate: string } | null>(null);
+  const [playerCount, setPlayerCount] = useState<string>("0");
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [gamesError, setGamesError] = useState(false);
 
   // ── Onboarding state — drives the modal's drip status card
   const [onboardStatus, setOnboardStatus] = useState<OnboardStatus>("dripping");
@@ -759,11 +687,6 @@ export default function HomePage() {
     : null;
 
   // ── Onboarding: drip CELO + register on waitlist for new users
-  // When connectStep flips to "success" we set status to "dripping" so the
-  // modal shows a spinner. useOnboarding fires the API call and calls back
-  // onSuccess / onError to update status, which unlocks the "Enter lobby" button.
-
-  // We need to track if onboarding has been triggered to avoid re-triggering
   const [onboardingTriggered, setOnboardingTriggered] = useState(false);
 
   const { retry: retryOnboarding } = useOnboarding({
@@ -782,22 +705,30 @@ export default function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
+      setGamesError(false);
       try {
-        const [gamesData, leaderboardData, price, block, players, distributed] = await Promise.all([
-          fetchGames(),
+        const [gamesResult, leaderboardData, price, block, players] = await Promise.all([
+          fetchGames().then(
+            (data) => ({ ok: true as const, data }),
+            (err) => ({ ok: false as const, err })
+          ),
           fetchLeaderboard(),
           fetchUSDmPrice(),
           fetchBlockNumber(),
           fetchPlayerCount(),
-          fetchTotalDistributed(),
         ]);
 
-        setGames(gamesData);
+        if (gamesResult.ok) {
+          setGames(gamesResult.data);
+        } else {
+          console.error("fetchGames failed:", gamesResult.err);
+          setGames([]);
+          setGamesError(true);
+        }
         setLeaderboard(leaderboardData);
         setUsdmPrice(price);
         setBlockNumber(block);
         setPlayerCount(players);
-        setTotalDistributed(distributed);
 
         if (authenticated && activeAddress) {
           const stats = await fetchUserStats(activeAddress);
@@ -821,17 +752,14 @@ export default function HomePage() {
   useEffect(() => {
     if (authenticated && connectStep === "connecting") {
       setConnectStep("success");
-      
-      // Trigger onboarding when we first get authentication
+
       if (!onboardingTriggered && activeWalletForSigning) {
         setOnboardingTriggered(true);
         setOnboardStatus("dripping");
-        // The useOnboarding hook will automatically run when wallet and authenticated are set
       }
     }
   }, [authenticated, connectStep, activeWalletForSigning, onboardingTriggered]);
 
-  // Reset onboarding trigger when wallet changes
   useEffect(() => {
     setOnboardingTriggered(false);
     setOnboardStatus("pending");
@@ -849,7 +777,11 @@ export default function HomePage() {
 
   const handleGoToLobby = useCallback(() => router.push("/lobby"), [router]);
 
-  // Called by "Enter lobby →" button — only reachable once drip resolves
+  const handlePlay = useCallback(
+    (gameId: string) => router.push(`/game/${gameId}`),
+    [router]
+  );
+
   const handleEnterLobby = useCallback(() => {
     setConnectStep("idle");
     router.push("/lobby");
@@ -857,9 +789,10 @@ export default function HomePage() {
 
   const filteredGames = filter === "all" ? games : games.filter((g) => g.type === filter);
   const showModal = !isMiniPay && (connectStep === "connecting" || connectStep === "success");
+  const isConnected = authenticated || isMiniPay;
 
   return (
-    <main className="relative min-h-screen w-full text-gray-100">
+    <main className="relative min-h-screen w-full text-gray-100 pb-20 sm:pb-0">
       <LiquidBackground />
 
       {showModal && (
@@ -876,7 +809,7 @@ export default function HomePage() {
       <div className="relative z-10">
         {/* ── Nav */}
         <nav className="w-full glass sticky top-0 z-40 border-b border-white/[0.07]">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-3.5">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5">
             <span className="font-mono-arc text-sm font-bold tracking-widest uppercase">
               mini<span className="text-violet-400">game</span>
             </span>
@@ -893,11 +826,11 @@ export default function HomePage() {
                 <div className="relative">
                   <button
                     onClick={() => setShowDropdown((v) => !v)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all"
+                    className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full transition-all"
                     style={{ background: "rgba(56,189,248,0.08)", border: "0.5px solid rgba(56,189,248,0.25)" }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
-                    <span className="font-mono-arc text-[10px] text-cyan-300 tracking-wider hidden sm:inline">
+                    <span className="font-mono-arc text-[10px] text-cyan-300 tracking-wider">
                       {miniPayShort ?? shortAddress ?? "Mainnet"}
                     </span>
                     <span className="font-mono-arc text-[9px] text-cyan-400 tracking-wider">⬡</span>
@@ -920,12 +853,12 @@ export default function HomePage() {
                 <div className="relative">
                   <button
                     onClick={() => setShowDropdown((v) => !v)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all hover:border-violet-400/40"
+                    className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full transition-all hover:border-violet-400/40"
                     style={{ background: "rgba(167,139,250,0.08)", border: "0.5px solid rgba(167,139,250,0.25)" }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#4ade80", boxShadow: "0 0 5px #4ade80" }} />
                     {shortAddress && (
-                      <span className="font-mono-arc text-[10px] text-violet-300 tracking-wider hidden sm:inline">
+                      <span className="font-mono-arc text-[10px] text-violet-300 tracking-wider">
                         {shortAddress}
                       </span>
                     )}
@@ -945,7 +878,7 @@ export default function HomePage() {
               ) : (
                 <button
                   onClick={handleConnect}
-                  className="font-mono-arc text-[10px] px-4 py-2 rounded-sm font-bold hover:opacity-90 transition-all uppercase tracking-wider flex items-center gap-1.5"
+                  className="font-mono-arc text-[10px] px-3.5 sm:px-4 py-2 rounded-sm font-bold hover:opacity-90 active:scale-[0.98] transition-all uppercase tracking-wider flex items-center gap-1.5"
                   style={{ background: "#a78bfa", color: "#000" }}
                 >
                   <span>⬡</span> Connect
@@ -956,67 +889,64 @@ export default function HomePage() {
         </nav>
 
         {/* ── Ticker */}
-        <div className="flex items-center gap-5 px-4 sm:px-6 py-2 border-b border-white/[0.04] bg-black/30 backdrop-blur-sm overflow-x-auto">
-          <span className="font-mono-arc text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
+        <div className="flex items-center gap-4 sm:gap-5 px-4 sm:px-6 py-1.5 sm:py-2 border-b border-white/[0.04] bg-black/30 backdrop-blur-sm overflow-x-auto">
+          <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" style={{ boxShadow: "0 0 5px #4ade80" }} />
-            NETWORK: <span className="text-violet-400">{NETWORK_CONFIG.displayName}</span>
+            <span className="hidden xs:inline text-violet-400">{NETWORK_CONFIG.displayName}</span>
           </span>
-          <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
+          <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap">
             PLAYERS: <span className="text-violet-400">{playerCount}</span>
           </span>
-          <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
+          <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap">
             USDm: <span className="text-violet-400">{usdmPrice}</span>
           </span>
-          <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
+          <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap hidden sm:inline">
             BLOCK: <span className="text-violet-400">{blockNumber}</span>
           </span>
-          {(authenticated || isMiniPay) && walletTypeLabel && (
-            <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap hidden sm:inline">
-              WALLET: <span className="text-cyan-400">{walletTypeLabel}</span>
-            </span>
-          )}
-          <span className="font-mono-arc text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
+          <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
             SYS_OK ████ 100%
           </span>
         </div>
 
-        {/* ── Hero */}
-        <section className="w-full px-4 sm:px-6 py-14 sm:py-20">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-10 items-start">
+        {/* ── Hero + HUD, tightened into one compact block on mobile */}
+        <section className="w-full px-4 sm:px-6 pt-6 pb-6 sm:py-16">
+          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 sm:gap-10 items-start">
             <div>
-              <p className="font-mono-arc text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+              <p className="font-mono-arc text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-3 sm:mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                MINIGAME PROTOCOL v2.4 — MAINNET INITIALIZED
+                MINIGAME PROTOCOL v2.4 — LIVE
               </p>
-              <h1 className="text-4xl sm:text-5xl font-black leading-[1.08] tracking-tight mb-5">
+              <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight mb-3 sm:mb-5">
                 Play mini games.<br />
-                <span className="text-violet-400">Earn rewards.</span><br />
+                <span className="text-violet-400">Earn rewards.</span>{" "}
                 <span className="text-cyan-400">Own your stats.</span>
               </h1>
-              <p className="text-sm text-gray-500 leading-relaxed mb-7 max-w-md">
+              <p className="text-[13px] sm:text-sm text-gray-500 leading-relaxed mb-5 sm:mb-7 max-w-md">
                 {isMiniPay
                   ? "You're connected to Ethereum Mainnet. Play mini games and earn USDm tokens on every win."
-                  : "Log in with Privy — your wallet is created instantly. Play casual, competitive, or trivia games and earn USDm tokens on every win."}
+                  : "Log in with Privy — your wallet is created instantly. Play, compete, and earn USDm on every win."}
               </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {authenticated || isMiniPay ? (
+
+              {/* Mobile: one primary CTA. Desktop: primary + secondary. */}
+              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                {isConnected ? (
                   <button
                     onClick={handleGoToLobby}
-                    className="font-mono-arc text-xs px-7 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 transition-all uppercase tracking-wider"
+                    className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
                   >
                     Go to lobby →
                   </button>
                 ) : (
                   <button
                     onClick={handleConnect}
-                    className="font-mono-arc text-xs px-7 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 transition-all uppercase tracking-wider"
+                    className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
                   >
                     [ Get started — it&apos;s free ]
                   </button>
                 )}
                 <button
                   onClick={handleGoToLobby}
-                  className="font-mono-arc text-xs px-7 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider"
+                  className="hidden sm:inline font-mono-arc text-xs px-6 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider"
                 >
                   Browse games
                 </button>
@@ -1035,30 +965,29 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Stats bar */}
+        {/* ── Compact stats strip — folded tight against hero, no page-break feel */}
         <div className="border-y border-white/[0.05] bg-black/20 backdrop-blur-sm">
-          <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4">
+          <div className="max-w-5xl mx-auto grid grid-cols-3">
             {[
-              { num: playerCount,        label: "Players online",   color: "#a78bfa" },
-              { num: `${games.length}`,  label: "Games available",  color: "#38bdf8" },
-              { num: totalDistributed,   label: "USDm tokens paid", color: "#e2e8f0" },
-              { num: "Free",             label: "To join",          color: "#4ade80" },
+              { num: playerCount,        label: "Online",   color: "#a78bfa" },
+              { num: `${games.length}`,  label: "Games",    color: "#38bdf8" },
+              { num: "Free",             label: "To join",  color: "#4ade80" },
             ].map((s, i) => (
               <div
                 key={s.label}
-                className={`text-center py-8 px-4 ${i < 3 ? "border-r border-white/[0.05]" : ""}`}
+                className={`text-center py-4 sm:py-8 px-1 sm:px-4 ${i < 2 ? "border-r border-white/[0.05]" : ""}`}
               >
-                <p className="font-mono-arc text-2xl font-bold mb-1" style={{ color: s.color }}>{s.num}</p>
-                <p className="font-mono-arc text-[10px] text-gray-600 uppercase tracking-wider">{s.label}</p>
+                <p className="font-mono-arc text-base sm:text-2xl font-bold mb-0.5 sm:mb-1" style={{ color: s.color }}>{s.num}</p>
+                <p className="font-mono-arc text-[8px] sm:text-[10px] text-gray-600 uppercase tracking-wider">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ── Games grid */}
-        <section className="w-full px-4 sm:px-6 py-10">
+        {/* ── Games grid — flows straight from the stats strip, same section rhythm */}
+        <section className="w-full px-4 sm:px-6 pt-6 pb-4 sm:py-10">
           <div className="max-w-5xl mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex items-center gap-3">
                 <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Mini Games</span>
                 <span className="flex-1 h-px bg-white/[0.05]" />
@@ -1066,12 +995,12 @@ export default function HomePage() {
                   {games.length} active
                 </span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 sm:gap-2 overflow-x-auto">
                 {(["all", "arcade", "multi", "trivia"] as GameType[]).map((f) => (
                   <button
                     key={f}
                     onClick={() => setFilter(f)}
-                    className={`font-mono-arc text-[9px] px-3 py-1.5 rounded-sm uppercase tracking-wider transition-all ${
+                    className={`font-mono-arc text-[9px] px-3 py-1.5 rounded-sm uppercase tracking-wider transition-all whitespace-nowrap ${
                       filter === f ? "bg-violet-500 text-black font-bold" : "glass-sm text-gray-500 hover:text-gray-200"
                     }`}
                   >
@@ -1082,28 +1011,49 @@ export default function HomePage() {
             </div>
 
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-40 bg-white/[0.05] rounded-lg animate-pulse" />
+                  <div key={i} className="h-36 sm:h-40 bg-white/[0.05] rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : gamesError ? (
+              <div className="text-center py-10 sm:py-14">
+                <p className="font-mono-arc text-xs text-red-400 mb-1">Couldn&apos;t load games</p>
+                <p className="font-mono-arc text-[10px] text-gray-600 mb-3">Check that Supabase is reachable and try again.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="font-mono-arc text-[10px] text-violet-400 uppercase tracking-wider hover:text-violet-300 transition-colors"
+                >
+                  Retry →
+                </button>
+              </div>
+            ) : filteredGames.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                {filteredGames.map((game) => (
+                  <GameCard key={game.id} game={game} onPlay={handlePlay} />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {filteredGames.map((game) => (
-                  <GameCard key={game.id} game={game} />
-                ))}
+              <div className="text-center py-10 sm:py-14">
+                <p className="font-mono-arc text-xs text-gray-600 mb-1">No games in this category</p>
+                <button
+                  onClick={() => setFilter("all")}
+                  className="font-mono-arc text-[10px] text-violet-400 uppercase tracking-wider hover:text-violet-300 transition-colors"
+                >
+                  Show all →
+                </button>
               </div>
             )}
           </div>
         </section>
 
-        {/* ── Leaderboard */}
-        <section className="w-full px-4 sm:px-6 py-8 border-t border-white/[0.05]">
+        {/* ── Leaderboard — same continuous flow, no hard border break on mobile */}
+        <section className="w-full px-4 sm:px-6 pt-2 pb-8 sm:py-8 sm:border-t sm:border-white/[0.05]">
           <div className="max-w-5xl mx-auto">
-            <div className="glass-card p-5 sm:p-6 border-pink-500/10 relative overflow-hidden">
+            <div className="glass-card p-4 sm:p-6 border-pink-500/10 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-pink-500/40 to-transparent" />
-              <div className="flex items-center gap-3 mb-5">
-                <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Top players — this cycle</span>
+              <div className="flex items-center gap-3 mb-3 sm:mb-5">
+                <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Top players</span>
                 <span className="flex-1 h-px bg-white/[0.04]" />
                 <span className="font-mono-arc text-[9px] text-pink-400 border border-pink-500/25 px-2 py-0.5 rounded-sm">Weekly</span>
               </div>
@@ -1118,11 +1068,43 @@ export default function HomePage() {
                   <LeaderboardRow key={entry.name} entry={entry} rank={i} />
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4">No leaderboard data available</p>
+                <p className="text-center text-gray-500 py-4 text-sm">No leaderboard data available</p>
               )}
             </div>
           </div>
         </section>
+      </div>
+
+      {/* ── Mobile sticky action bar — keeps the primary action one thumb-reach away */}
+      <div
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-30 px-4 py-3 flex items-center gap-2.5"
+        style={{
+          background: "rgba(9,10,18,0.92)",
+          backdropFilter: "blur(12px)",
+          borderTop: "0.5px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <button
+          onClick={handleGoToLobby}
+          className="flex-1 font-mono-arc text-[11px] py-3 rounded-sm glass-sm text-gray-300 uppercase tracking-wider text-center"
+        >
+          Browse
+        </button>
+        {isConnected ? (
+          <button
+            onClick={handleGoToLobby}
+            className="flex-[1.4] font-mono-arc text-[11px] py-3 rounded-sm bg-violet-500 text-black font-bold uppercase tracking-wider active:scale-[0.98] transition-all"
+          >
+            Go to lobby →
+          </button>
+        ) : (
+          <button
+            onClick={handleConnect}
+            className="flex-[1.4] font-mono-arc text-[11px] py-3 rounded-sm bg-violet-500 text-black font-bold uppercase tracking-wider active:scale-[0.98] transition-all"
+          >
+            Get started
+          </button>
+        )}
       </div>
     </main>
   );
