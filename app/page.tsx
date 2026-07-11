@@ -934,15 +934,15 @@ export default function HomePage() {
                     onClick={handleGoToLobby}
                     className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
                   >
-                    Go to lobby →
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnect}
-                    className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
-                  >
-                    [ Get started — it&apos;s free ]
-                  </button>
+                    Enter lobby →
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleConnect}
+                      className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
+                    >
+                      Connect wallet
+                    </button>
                 )}
                 <button
                   onClick={handleGoToLobby}
