@@ -326,7 +326,7 @@ export default function BlackjackGame({ gameConfig, onGameComplete }: GameProps)
               style={{
                 background: result === "win" ? "rgba(74,222,128,0.15)" : result === "lose" ? "rgba(239,68,68,0.15)" : "rgba(251,191,36,0.15)",
                 border: `1px solid ${result === "win" ? "#4ade80" : result === "lose" ? "#ef4444" : "#f59e0b"}`,
-                color: result === "win" ? "#4ade80" : result === "lose" ? "#ef4444" : "#f59e0b",
+                  color: result === "win" ? "#22c55e" : result === "lose" ? "#f87171" : "#fbbf24",
               }}
             >
               <p className="text-base">
