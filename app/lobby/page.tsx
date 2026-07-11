@@ -290,7 +290,7 @@ function LobbyChat({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder={shortAddress ? "Say something…" : "Connect wallet to chat"}
+          placeholder={shortAddress ? "Type a message…" : "Connect wallet to chat"}
           disabled={!shortAddress}
           className="flex-1 font-mono-arc text-[10px] px-2.5 py-1.5 rounded"
           style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.08)", color: "#9ca3af", outline: "none" }}
