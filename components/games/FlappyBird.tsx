@@ -5,7 +5,7 @@ import type { GameProps } from "../../app/game/[gameId]/page";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PIPE_WIDTH = 70;
+const PIPE_WIDTH = 72;
 const GAME_WIDTH = 500;
 const GAME_HEIGHT = 700;
 
