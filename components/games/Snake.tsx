@@ -497,7 +497,7 @@ export default function SnakeGame({ gameConfig, onGameComplete, onGameFail }: Ga
                   >
                     <p className="text-xs font-bold">{config.label}</p>
                     <p className="text-[8px] opacity-60 mt-0.5">
-                      {d === "easy" ? "Slow" : d === "medium" ? "Classic" : "Fast"}
+                      {d === "easy" ? "Relaxed" : d === "medium" ? "Classic" : "Pro"}
                     </p>
                   </button>
                 );
