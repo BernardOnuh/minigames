@@ -385,7 +385,7 @@ export default function TriviaGameEnhanced({ gameConfig, onGameComplete, onGameF
 
         {/* Question */}
         <h3 className="text-xl font-bold text-white mb-1 text-center leading-tight">{q.q}</h3>
-        <p className="text-center text-[9px] text-gray-500 mb-6 uppercase tracking-widest">{cat.label}</p>
+          <p className="text-center text-[9px] text-gray-600 mb-6 uppercase tracking-widest">{cat.label}</p>
 
         {/* Hint */}
         {showHint && (
