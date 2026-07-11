@@ -1001,7 +1001,7 @@ export default function HomePage() {
                     key={f}
                     onClick={() => setFilter(f)}
                     className={`font-mono-arc text-[9px] px-3 py-1.5 rounded-sm uppercase tracking-wider transition-all whitespace-nowrap ${
-                      filter === f ? "bg-violet-500 text-black font-bold" : "glass-sm text-gray-500 hover:text-gray-200"
+                       filter === f ? "bg-violet-600 text-white font-bold" : "glass-sm text-gray-500 hover:text-gray-200"
                     }`}
                   >
                     {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
