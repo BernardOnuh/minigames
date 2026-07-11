@@ -290,7 +290,7 @@ export default function FruitBlitzGame({ gameConfig, onGameComplete }: GameProps
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
       // Grid
-      ctx.strokeStyle = "rgba(255,255,255,0.018)"; ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(255,255,255,0.025)"; ctx.lineWidth = 1;
       for (let gx = 0; gx < W; gx += 60) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
       for (let gy = 0; gy < H; gy += 60) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
 
