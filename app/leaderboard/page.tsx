@@ -11,7 +11,7 @@ import {
   type Game,
 } from "../../lib/supabase";
 
-const RANK_COLORS = ["#fbbf24", "#94a3b8", "#c4704f", "#64748b", "#64748b"];
+const RANK_COLORS = ["#fbbf24", "#c0c8d8", "#cd7f50", "#6b7a8f", "#6b7a8f"];
 
 function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
   return (
