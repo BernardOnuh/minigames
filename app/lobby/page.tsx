@@ -520,7 +520,7 @@ export default function LobbyPage() {
             DB: <span className="text-violet-400">ACTIVE</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            PLAYERS: <span className="text-violet-400">{playerCount}</span>
+            ONLINE: <span className="text-violet-400">{playerCount}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
             GAMES: <span className="text-violet-400">{games.length}</span>
