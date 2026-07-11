@@ -344,11 +344,11 @@ export default function TriviaGameEnhanced({ gameConfig, onGameComplete, onGameF
   return (
     <div className="w-full max-w-2xl">
       <div
-        className="rounded-2xl p-6 shadow-2xl border border-purple-400/30"
-        style={{ background: "linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%)" }}
-      >
-        {/* HUD */}
-        <div className="mb-6 p-3 rounded-lg border border-cyan-400/20" style={{ background: "rgba(56,189,248,0.04)" }}>
+          className="rounded-2xl p-6 shadow-2xl border border-purple-400/35"
+          style={{ background: "linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%)" }}
+        >
+          {/* HUD */}
+          <div className="mb-6 p-3 rounded-lg border border-cyan-400/25" style={{ background: "rgba(56,189,248,0.04)" }}>
           <div className="flex justify-between items-center gap-3">
             <div className="flex-1">
               <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-0.5">Score</p>
