@@ -169,9 +169,9 @@ function LiveMatchBanner({ match, onJoin }: { match: LiveMatch; onJoin: (id: str
 
 function GameCard({ game, onPlay }: { game: Game; onPlay: (gameId: string) => void }) {
   const TAG_STYLES: Record<Game["type"], string> = {
-    arcade: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-    multi:  "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-    trivia: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    arcade: "bg-violet-500/15 text-violet-300 border border-violet-500/30",
+    multi:  "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
+    trivia: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
   };
   const TAG_LABELS: Record<Game["type"], string> = {
     arcade: "Arcade", multi: "Multiplayer", trivia: "Trivia",
