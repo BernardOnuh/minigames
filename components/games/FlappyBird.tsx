@@ -294,7 +294,7 @@ export default function FlappyBirdGameEnhanced({
     setGamePhase("results");
     
     const config = DIFFICULTY_CONFIGS[difficulty];
-    const xp = Math.max(10, Math.floor((finalScoreValue / 1000) * (gameConfig.base_xp ?? 75) * config.xpMultiplier));
+    const xp = Math.max(100, Math.floor((finalScoreValue / 100) * (gameConfig.base_xp ?? 75) * config.xpMultiplier));
     setXpEarned(xp);
     
     if (gameLoopRef.current) {

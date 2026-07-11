@@ -100,6 +100,7 @@ export async function fetchLeaderboard(limit = 5): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from("leaderboard_weekly")
     .select("wallet, username, xp, earnings, avatar_color, avatar_text")
+    .order("xp", { ascending: false })
     .limit(limit);
 
   if (error || !data) {
@@ -278,6 +279,35 @@ export async function fetchPlayerCount(): Promise<string> {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// ─── Game-specific leaderboard ────────────────────────────────────────────
+
+export async function fetchGameLeaderboard(
+  gameSlug: string,
+  limit = 10
+): Promise<{ wallet: string; username: string; score: number; created_at: string }[]> {
+  const { data, error } = await supabase
+    .from("game_results")
+    .select("wallet, score, created_at, games!inner(game_id)")
+    .eq("games.game_id", gameSlug)
+    .eq("status", "completed")
+    .order("score", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) {
+    console.warn("fetchGameLeaderboard:", error?.message);
+    return [];
+  }
+
+  return data.map((r) => ({
+    wallet: r.wallet,
+    username: shortenWallet(r.wallet),
+    score: r.score,
+    created_at: r.created_at,
+  }));
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
 
 export function shortenWallet(address: string): string {
   if (!address || address.length < 10) return address;

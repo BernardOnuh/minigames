@@ -3,820 +3,448 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { GameProps } from "../../app/game/[gameId]/page";
 
-// Game constants - scaled for mobile
-const BASE_WIDTH = 600;
-const BASE_HEIGHT = 400;
-const BALL_RADIUS = 6;
-const HOLE_RADIUS = 8;
-const FRICTION = 0.98;
-const MAX_POWER = 25;
+const W = 600, H = 400;
+const BALL_R = 6, HOLE_R = 8, FRICTION = 0.97, MAX_POWER = 18;
+const STEPS = 3; // sub-steps per frame for reliable collision
 
-// Golf course hole definitions
 type Obstacle = "wall" | "water" | "spike";
+type Point = { x: number; y: number };
 
-interface Hole {
+interface HoleDef {
   id: number;
-  ballStartX: number;
-  ballStartY: number;
-  holeX: number;
-  holeY: number;
-  obstacles: Array<{
-    type: Obstacle;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }>;
+  start: Point;
+  hole: Point;
+  obstacles: { type: Obstacle; x: number; y: number; w: number; h: number }[];
   par: number;
-  difficulty: "easy" | "medium" | "hard";
 }
 
-interface Ball {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  isMoving: boolean;
-}
-
-interface Achievement {
-  id: string;
-  name: string;
-  unlocked: boolean;
-}
-
-// Define 9 holes with increasing difficulty
-const HOLES: Hole[] = [
-  {
-    id: 1,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 200,
-    obstacles: [],
-    par: 1,
-    difficulty: "easy",
-  },
-  {
-    id: 2,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 100,
-    obstacles: [{ type: "wall", x: 300, y: 150, width: 20, height: 100 }],
-    par: 2,
-    difficulty: "easy",
-  },
-  {
-    id: 3,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 200,
-    obstacles: [{ type: "water", x: 250, y: 100, width: 150, height: 200 }],
-    par: 2,
-    difficulty: "medium",
-  },
-  {
-    id: 4,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 50,
-    obstacles: [
-      { type: "wall", x: 200, y: 100, width: 20, height: 150 },
-      { type: "wall", x: 350, y: 200, width: 20, height: 150 },
-    ],
-    par: 3,
-    difficulty: "medium",
-  },
-  {
-    id: 5,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 200,
-    obstacles: [
-      { type: "water", x: 150, y: 0, width: 30, height: 200 },
-      { type: "spike", x: 300, y: 150, width: 60, height: 60 },
-      { type: "water", x: 450, y: 100, width: 30, height: 250 },
-    ],
-    par: 3,
-    difficulty: "hard",
-  },
-  {
-    id: 6,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 200,
-    obstacles: [
-      { type: "wall", x: 150, y: 0, width: 250, height: 150 },
-      { type: "wall", x: 200, y: 250, width: 250, height: 150 },
-    ],
-    par: 3,
-    difficulty: "hard",
-  },
-  {
-    id: 7,
-    ballStartX: 80,
-    ballStartY: 100,
-    holeX: 520,
-    holeY: 300,
-    obstacles: [
-      { type: "water", x: 200, y: 150, width: 200, height: 100 },
-    ],
-    par: 3,
-    difficulty: "hard",
-  },
-  {
-    id: 8,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 200,
-    obstacles: [
-      { type: "spike", x: 150, y: 150, width: 40, height: 100 },
-      { type: "spike", x: 300, y: 100, width: 40, height: 100 },
-      { type: "spike", x: 450, y: 150, width: 40, height: 100 },
-    ],
-    par: 4,
-    difficulty: "hard",
-  },
-  {
-    id: 9,
-    ballStartX: 80,
-    ballStartY: 200,
-    holeX: 520,
-    holeY: 200,
-    obstacles: [
-      { type: "water", x: 0, y: 0, width: 100, height: 400 },
-      { type: "spike", x: 200, y: 100, width: 100, height: 50 },
-      { type: "wall", x: 300, y: 200, width: 20, height: 200 },
-      { type: "water", x: 500, y: 0, width: 100, height: 400 },
-    ],
-    par: 4,
-    difficulty: "hard",
-  },
+const HOLES: HoleDef[] = [
+  { id: 1, start: { x: 80, y: 200 }, hole: { x: 520, y: 200 }, obstacles: [], par: 2 },
+  { id: 2, start: { x: 80, y: 200 }, hole: { x: 520, y: 100 }, obstacles: [{ type: "wall", x: 300, y: 150, w: 20, h: 100 }], par: 2 },
+  { id: 3, start: { x: 80, y: 200 }, hole: { x: 520, y: 200 }, obstacles: [{ type: "water", x: 250, y: 100, w: 150, h: 200 }], par: 3 },
+  { id: 4, start: { x: 80, y: 200 }, hole: { x: 520, y: 50 }, obstacles: [
+    { type: "wall", x: 200, y: 100, w: 20, h: 150 }, { type: "wall", x: 350, y: 200, w: 20, h: 150 }
+  ], par: 3 },
+  { id: 5, start: { x: 80, y: 200 }, hole: { x: 520, y: 200 }, obstacles: [
+    { type: "water", x: 150, y: 0, w: 30, h: 200 }, { type: "spike", x: 300, y: 150, w: 60, h: 60 },
+    { type: "water", x: 450, y: 100, w: 30, h: 250 }
+  ], par: 3 },
+  { id: 6, start: { x: 80, y: 200 }, hole: { x: 520, y: 200 }, obstacles: [
+    { type: "wall", x: 150, y: 0, w: 250, h: 150 }, { type: "wall", x: 200, y: 250, w: 250, h: 150 }
+  ], par: 3 },
+  { id: 7, start: { x: 80, y: 100 }, hole: { x: 520, y: 300 }, obstacles: [{ type: "water", x: 200, y: 150, w: 200, h: 100 }], par: 3 },
+  { id: 8, start: { x: 80, y: 200 }, hole: { x: 520, y: 200 }, obstacles: [
+    { type: "spike", x: 150, y: 150, w: 40, h: 100 }, { type: "spike", x: 300, y: 100, w: 40, h: 100 },
+    { type: "spike", x: 450, y: 150, w: 40, h: 100 }
+  ], par: 4 },
+  { id: 9, start: { x: 80, y: 200 }, hole: { x: 520, y: 200 }, obstacles: [
+    { type: "water", x: 0, y: 0, w: 100, h: 400 }, { type: "spike", x: 200, y: 100, w: 100, h: 50 },
+    { type: "wall", x: 300, y: 200, w: 20, h: 200 }, { type: "water", x: 500, y: 0, w: 100, h: 400 }
+  ], par: 4 },
 ];
 
-export default function DoodleMinGolfGame({
-  gameConfig,
-  onGameComplete,
-  onGameFail,
-}: GameProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gameLoopRef = useRef<number>(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const particlesRef = useRef<
-    Array<{
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      life: number;
-      color: string;
-    }>
-  >([]);
+// ─── XP Claim Screen ──────────────────────────────────────────────────────────
 
-  const [currentHole, setCurrentHole] = useState(0);
-  const [strokes, setStrokes] = useState(0);
-  const [totalScore, setTotalScore] = useState(0);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [power, setPower] = useState(0);
-  const [angle, setAngle] = useState(0);
-  const [isAiming, setIsAiming] = useState(false);
-  const [showAim, setShowAim] = useState(false);
-  const [combo, setCombo] = useState(0);
-  const [canvasSize, setCanvasSize] = useState({ width: BASE_WIDTH, height: BASE_HEIGHT });
-  const [scale, setScale] = useState(1);
-  const [achievements, setAchievements] = useState<Achievement[]>([
-    { id: "hole_in_one", name: "Ace!", unlocked: false },
-    { id: "birdie_streak", name: "Birdie Streak", unlocked: false },
-    { id: "perfect_9", name: "Perfect 9", unlocked: false },
-    { id: "speedrunner", name: "Speedrunner", unlocked: false },
-  ]);
-  const [showAchievement, setShowAchievement] = useState<string | null>(null);
-  const [slowMode, setSlowMode] = useState(false);
-  const [gameComplete, setGameComplete] = useState(false);
-
-  const ballRef = useRef<Ball>({
-    x: HOLES[0].ballStartX,
-    y: HOLES[0].ballStartY,
-    vx: 0,
-    vy: 0,
-    isMoving: false,
-  });
-
-  const holeData = HOLES[currentHole];
-  const totalHoles = HOLES.length;
-
-  // ─── Responsive Canvas ─────────────────────────────────────────────────────
+function XPClaimScreen({ score, xpEarned, onClaim }: {
+  score: number; xpEarned: number; onClaim: () => void;
+}) {
+  const [claimed, setClaimed] = useState(false);
+  const [counting, setCounting] = useState(0);
 
   useEffect(() => {
-    const updateSize = () => {
-      const container = containerRef.current;
-      if (!container) return;
+    if (!claimed) return;
+    let n = 0;
+    const step = Math.ceil(xpEarned / 40);
+    const iv = setInterval(() => {
+      n = Math.min(n + step, xpEarned);
+      setCounting(n);
+      if (n >= xpEarned) clearInterval(iv);
+    }, 30);
+    return () => clearInterval(iv);
+  }, [claimed, xpEarned]);
 
-      const containerWidth = container.clientWidth;
-      const maxWidth = Math.min(containerWidth, 600);
-      const aspectRatio = BASE_HEIGHT / BASE_WIDTH;
-      const width = Math.min(maxWidth, window.innerWidth - 32);
-      const height = width * aspectRatio;
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-6 rounded-2xl" style={{ background: "rgba(10,6,25,0.97)" }}>
+      <div style={{ fontSize: 56 }}>⛳</div>
+      <div className="text-center">
+        <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">Final score</p>
+        <p className="font-mono-arc text-5xl font-bold text-white tabular-nums">{score.toLocaleString()}</p>
+      </div>
+      <div className="w-full h-px" style={{ background: "rgba(167,139,250,0.15)" }} />
+      {!claimed ? (
+        <div className="text-center flex flex-col items-center gap-4">
+          <p className="font-mono-arc text-[9px] text-violet-400 uppercase tracking-[0.2em]">XP earned this round</p>
+          <div className="font-mono-arc text-3xl font-bold" style={{ color: "#a78bfa", textShadow: "0 0 20px rgba(167,139,250,0.5)" }}>
+            +{xpEarned} XP
+          </div>
+          <button onClick={() => setClaimed(true)}
+            className="font-mono-arc text-xs font-bold uppercase tracking-widest px-8 py-3 rounded-lg transition-all hover:opacity-90 active:scale-95"
+            style={{ background: "linear-gradient(135deg,#7c3aed,#a78bfa)", color: "#fff", boxShadow: "0 0 24px rgba(167,139,250,0.3)" }}
+          >
+            Claim XP →
+          </button>
+        </div>
+      ) : (
+        <div className="text-center flex flex-col items-center gap-4">
+          <p className="font-mono-arc text-[9px] text-violet-400 uppercase tracking-[0.2em]">XP claimed!</p>
+          <div className="font-mono-arc text-4xl font-bold" style={{ color: "#4ade80", textShadow: "0 0 20px rgba(74,222,128,0.4)" }}>
+            +{counting} XP ✓
+          </div>
+          <button onClick={onClaim}
+            className="font-mono-arc text-[10px] uppercase tracking-widest px-6 py-2.5 rounded-lg transition-all hover:opacity-80"
+            style={{ background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.12)", color: "#9ca3af" }}
+          >
+            Back to lobby →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
-      // Calculate scale for coordinate transformations
-      const newScale = width / BASE_WIDTH;
-      setScale(newScale);
-      setCanvasSize({ width, height });
-    };
+// ─── Main Game ─────────────────────────────────────────────────────────────────
 
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
+export default function MiniGolfGame({ gameConfig, onGameComplete, onGameFail }: GameProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef(0);
 
-  // ─── Particle System ──────────────────────────────────────────────────────
+  // All mutable state in a single ref to avoid stale closures
+  const g = useRef({
+    holeIdx: 0,
+    strokes: 0,
+    totalScore: 0,
+    phase: "start" as "start" | "playing" | "results",
+    showStart: true,
+    gameComplete: false,
+    ball: { x: HOLES[0].start.x, y: HOLES[0].start.y, vx: 0, vy: 0, moving: false },
+    drag: { active: false, dx: 0, dy: 0 },
+    finalScore: 0,
+    xpEarned: 0,
+    holeInHole: false, // prevent double-counting
+  });
 
-  const createParticles = useCallback((x: number, y: number, color: string) => {
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      particlesRef.current.push({
-        x,
-        y,
-        vx: Math.cos(angle) * (2 + Math.random() * 2),
-        vy: Math.sin(angle) * (2 + Math.random() * 2),
-        life: 0.8 + Math.random() * 0.4,
-        color,
-      });
-    }
-  }, []);
+  // React state for rendering
+  const [renderTick, setRenderTick] = useState(0);
+  const rerender = useCallback(() => setRenderTick(t => t + 1), []);
 
-  const unlockAchievement = useCallback((id: string) => {
-    setAchievements((prev) =>
-      prev.map((ach) =>
-        ach.id === id && !ach.unlocked ? { ...ach, unlocked: true } : ach
-      )
-    );
-    setShowAchievement(id);
-    setTimeout(() => setShowAchievement(null), 3000);
-  }, []);
+  const hole = HOLES[g.current.holeIdx];
+  const UI_SCORE = g.current.totalScore;
+  const UI_STROKES = g.current.strokes;
+  const UI_HOLE = g.current.holeIdx;
+  const UI_GAMECOMPLETE = g.current.gameComplete;
+  const UI_SHOWSTART = g.current.showStart;
+  const UI_PHASE = g.current.phase;
+  const UI_FINAL = g.current.finalScore;
+  const UI_XP = g.current.xpEarned;
 
-  // ─── Drawing ──────────────────────────────────────────────────────────────
+  // ── Drawing ──────────────────────────────────────────────────────────────
 
-  const draw = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    // Clear with background
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
-    bgGrad.addColorStop(0, "#0a1f3f");
-    bgGrad.addColorStop(0.5, "#1a3f5f");
-    bgGrad.addColorStop(1, "#0f2a4f");
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, width, height);
+  const draw = useCallback(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const ctx = c.getContext("2d")!;
+    const s = g.current;
+    const holeDef = HOLES[s.holeIdx];
+    const b = s.ball;
 
-    // Grid background
-    ctx.strokeStyle = "rgba(34, 197, 94, 0.05)";
-    ctx.lineWidth = 1;
-    const gridSize = 40 * scale;
-    for (let i = 0; i < width; i += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, height);
-      ctx.stroke();
-    }
-    for (let i = 0; i < height; i += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(width, i);
-      ctx.stroke();
-    }
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0a1f3f"); bg.addColorStop(0.5, "#1a3f5f"); bg.addColorStop(1, "#0f2a4f");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
 
-    const ball = ballRef.current;
+    // Grid
+    ctx.strokeStyle = "rgba(34,197,94,0.04)";
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
-    // Draw obstacles with scaled coordinates
-    holeData.obstacles.forEach((obs) => {
-      const colors = {
-        wall: { fill: "#7c3aed", glow: "rgba(124, 58, 237, 0.6)" },
-        water: { fill: "#0ea5e9", glow: "rgba(14, 165, 233, 0.6)" },
-        spike: { fill: "#ef4444", glow: "rgba(239, 68, 68, 0.6)" },
-      };
-
-      const x = obs.x * scale;
-      const y = obs.y * scale;
-      const w = obs.width * scale;
-      const h = obs.height * scale;
-
-      ctx.fillStyle = colors[obs.type].fill;
-      ctx.shadowColor = colors[obs.type].glow;
-      ctx.shadowBlur = 15 * scale;
-      ctx.fillRect(x, y, w, h);
-
-      // Draw pattern on obstacles
-      if (obs.type === "spike") {
-        ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-        const spikeSize = 10 * scale;
-        for (let i = x; i < x + w; i += spikeSize) {
+    // Obstacles
+    const colorMap: Record<string, string> = { wall: "#7c3aed", water: "#0ea5e9", spike: "#ef4444" };
+    holeDef.obstacles.forEach(o => {
+      ctx.fillStyle = colorMap[o.type];
+      ctx.shadowColor = colorMap[o.type] + "66";
+      ctx.shadowBlur = 15;
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      if (o.type === "spike") {
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        for (let sx = o.x; sx < o.x + o.w; sx += 10) {
           ctx.beginPath();
-          ctx.moveTo(i, y);
-          ctx.lineTo(i + spikeSize / 2, y + h);
-          ctx.lineTo(i - spikeSize / 2, y + h);
-          ctx.closePath();
-          ctx.fill();
+          ctx.moveTo(sx, o.y); ctx.lineTo(sx + 5, o.y + o.h); ctx.lineTo(sx - 5, o.y + o.h);
+          ctx.closePath(); ctx.fill();
         }
       }
     });
-
-    // Draw hole
-    const holeX = holeData.holeX * scale;
-    const holeY = holeData.holeY * scale;
-    const holeRadius = HOLE_RADIUS * scale;
-    
-    ctx.shadowColor = "rgba(34, 197, 94, 0.8)";
-    ctx.shadowBlur = 20 * scale;
-    ctx.fillStyle = "#22c55e";
-    ctx.beginPath();
-    ctx.arc(holeX, holeY, holeRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#16a34a";
-    ctx.beginPath();
-    ctx.arc(holeX, holeY, holeRadius - 2 * scale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Draw ball
-    const ballX = ball.x * scale;
-    const ballY = ball.y * scale;
-    const ballRadius = BALL_RADIUS * scale;
-    
-    ctx.shadowColor = slowMode ? "#38bdf8" : "#fbbf24";
-    ctx.shadowBlur = 20 * scale;
-    const ballGrad = ctx.createRadialGradient(
-      ballX - ballRadius * 0.3, ballY - ballRadius * 0.3, 0,
-      ballX, ballY, ballRadius
-    );
-    ballGrad.addColorStop(0, slowMode ? "#38bdf8" : "#fbbf24");
-    ballGrad.addColorStop(1, slowMode ? "#0284c7" : "#d97706");
-    ctx.fillStyle = ballGrad;
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = slowMode ? "rgba(56, 189, 248, 0.8)" : "rgba(251, 191, 36, 0.8)";
-    ctx.lineWidth = 2 * scale;
-    ctx.stroke();
-
-    // Draw aiming line
-    if (showAim && !ball.isMoving) {
-      ctx.strokeStyle = "rgba(147, 197, 253, 0.6)";
-      ctx.lineWidth = 2 * scale;
-      ctx.setLineDash([5 * scale, 5 * scale]);
-      ctx.beginPath();
-      ctx.moveTo(ballX, ballY);
-      const distance = 200 * scale;
-      ctx.lineTo(
-        ballX + Math.cos(angle) * distance,
-        ballY + Math.sin(angle) * distance
-      );
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Power indicator
-      const powerWidth = 60 * scale;
-      ctx.fillStyle = `rgba(${Math.floor((power / MAX_POWER) * 255)}, ${Math.floor(
-        ((MAX_POWER - power) / MAX_POWER) * 255
-      )}, 100, 0.8)`;
-      ctx.fillRect(ballX - powerWidth / 2, ballY - 50 * scale, (power / MAX_POWER) * powerWidth, 5 * scale);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-      ctx.lineWidth = 1 * scale;
-      ctx.strokeRect(ballX - powerWidth / 2, ballY - 50 * scale, powerWidth, 5 * scale);
-    }
-
-    // Draw particles
     ctx.shadowBlur = 0;
-    particlesRef.current = particlesRef.current.filter((p) => p.life > 0);
-    particlesRef.current.forEach((p) => {
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = p.life;
-      ctx.beginPath();
-      ctx.arc(p.x * scale, p.y * scale, 3 * scale * p.life, 0, Math.PI * 2);
-      ctx.fill();
-      p.x += p.vx * 0.5;
-      p.y += p.vy * 0.5;
-      p.vy += 0.1;
-      p.life -= 0.02;
-    });
-    ctx.globalAlpha = 1;
+
+    // Hole
+    ctx.shadowColor = "rgba(34,197,94,0.8)"; ctx.shadowBlur = 20;
+    ctx.fillStyle = "#22c55e";
+    ctx.beginPath(); ctx.arc(holeDef.hole.x, holeDef.hole.y, HOLE_R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#16a34a";
+    ctx.beginPath(); ctx.arc(holeDef.hole.x, holeDef.hole.y, HOLE_R - 2, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Ball
+    const grad = ctx.createRadialGradient(b.x - BALL_R * 0.3, b.y - BALL_R * 0.3, 0, b.x, b.y, BALL_R);
+    grad.addColorStop(0, "#fbbf24"); grad.addColorStop(1, "#d97706");
+    ctx.shadowColor = "rgba(251,191,36,0.6)"; ctx.shadowBlur = 18;
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Drag arrow + power bar
+    if (s.drag.active && !b.moving) {
+      const len = Math.min(200, Math.hypot(s.drag.dx, s.drag.dy));
+      const ang = Math.atan2(s.drag.dy, s.drag.dx);
+      const ex = b.x + Math.cos(ang) * len;
+      const ey = b.y + Math.sin(ang) * len;
+      ctx.strokeStyle = "rgba(147,197,253,0.5)"; ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.setLineDash([]);
+      const pwr = Math.min(1, Math.hypot(s.drag.dx, s.drag.dy) / 150);
+      const bw = 80;
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillRect(b.x - bw / 2, b.y - 28, bw, 6);
+      ctx.fillStyle = `rgb(${Math.floor(255 * (1 - pwr))}, ${Math.floor(200 * pwr)}, 50)`;
+      ctx.fillRect(b.x - bw / 2, b.y - 28, bw * pwr, 6);
+    }
 
     // HUD
-    ctx.shadowColor = "transparent";
-    const fontSize = Math.max(10, 14 * Math.min(1, scale * 1.2));
-    ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
-    
-    ctx.textAlign = "left";
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    const margin = 15 * scale;
-    let lineHeight = fontSize * 1.3;
-    let yPos = 20 * scale;
-    
-    ctx.fillText(`HOLE ${currentHole + 1}/${totalHoles}`, margin, yPos);
-    yPos += lineHeight;
-    ctx.fillText(`PAR ${holeData.par}`, margin, yPos);
-    yPos += lineHeight;
-    ctx.fillText(`STROKES: ${strokes}`, margin, yPos);
-
-    // Score indicator
-    const scoreVsPar = strokes - holeData.par;
-    let scoreColor = "#4ade80";
-    if (scoreVsPar === 0) scoreColor = "#f59e0b";
-    if (scoreVsPar > 0) scoreColor = "#ef4444";
-
+    ctx.font = "bold 13px 'Courier New', monospace"; ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fillText(`HOLE ${s.holeIdx + 1}/${HOLES.length} - PAR ${holeDef.par}`, 15, 25);
+    ctx.fillText(`STROKES: ${s.strokes}`, 15, 45);
     ctx.textAlign = "right";
-    ctx.fillStyle = scoreColor;
-    const rightMargin = width - 20 * scale;
-    ctx.fillText(scoreVsPar === 0 ? "PAR" : scoreVsPar < 0 ? `${scoreVsPar}` : `+${scoreVsPar}`, rightMargin, 30 * scale);
+    ctx.fillStyle = "#a78bfa";
+    ctx.fillText(`TOTAL: ${s.totalScore}`, W - 15, 25);
+    const vs = s.strokes - holeDef.par;
+    ctx.fillStyle = vs < 0 ? "#4ade80" : vs === 0 ? "#f59e0b" : "#ef4444";
+    ctx.fillText(vs === 0 ? "PAR" : vs < 0 ? `${vs}` : `+${vs}`, W - 15, 45);
 
-    ctx.fillStyle = "rgba(147, 197, 253, 0.9)";
-    ctx.fillText(`TOTAL: ${totalScore}`, rightMargin, 50 * scale);
-
-    // Combo
-    if (combo > 0) {
+    // Start overlay
+    if (s.showStart && s.phase !== "results") {
+      ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(0, 0, W, H);
       ctx.textAlign = "center";
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = `bold ${fontSize * 1.1}px 'Courier New', monospace`;
-      ctx.fillText(`${combo}x COMBO 🔥`, width / 2, 30 * scale);
+      ctx.fillStyle = "#22c55e"; ctx.font = "bold 32px 'Courier New', monospace";
+      ctx.fillText("MINI GOLF", W / 2, H / 2 - 50);
+      ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.font = "14px 'Courier New', monospace";
+      ctx.fillText("Drag from the ball → aim & set power", W / 2, H / 2);
+      ctx.fillText("Release to shoot!", W / 2, H / 2 + 25);
+      ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.font = "11px 'Courier New', monospace";
+      ctx.fillText("Sink the ball in the hole. Avoid obstacles.", W / 2, H / 2 + 60);
     }
 
-    // Slow mode
-    if (slowMode) {
+    // Game complete overlay
+    if (s.gameComplete && s.phase !== "results") {
+      ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(0, 0, W, H);
       ctx.textAlign = "center";
-      ctx.fillStyle = "rgba(56, 189, 248, 0.9)";
-      ctx.font = `bold ${fontSize * 0.9}px 'Courier New', monospace`;
-      ctx.fillText("⏱ SLOW MODE", width / 2, 60 * scale);
+      ctx.fillStyle = "#4ade80"; ctx.font = "bold 28px 'Courier New', monospace";
+      ctx.fillText("COURSE COMPLETE!", W / 2, H / 2 - 40);
+      ctx.fillStyle = "#fbbf24"; ctx.font = "bold 20px 'Courier New', monospace";
+      ctx.fillText(`Score: ${s.totalScore}`, W / 2, H / 2 + 10);
+      ctx.fillStyle = "#a78bfa"; ctx.font = "bold 14px 'Courier New', monospace";
+      ctx.fillText("TAP TO CONTINUE", W / 2, H / 2 + 55);
     }
+  }, []);
 
-    // Instructions
-    if (!gameStarted) {
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      const instructionFontSize = Math.max(14, 20 * Math.min(1, scale * 1.2));
-      ctx.font = `${instructionFontSize}px 'Courier New', monospace`;
-      ctx.textAlign = "center";
-      ctx.fillText("TAP TO AIM & SET POWER", width / 2, height / 2 - 40 * scale);
-      ctx.fillText("RELEASE TO SHOOT", width / 2, height / 2 + 20 * scale);
-    }
+  // ── Physics ──────────────────────────────────────────────────────────────
 
-    // Game complete
-    if (gameComplete) {
-      ctx.fillStyle = "rgba(0,0,0,0.75)";
-      ctx.fillRect(0, 0, width, height);
+  const tick = useCallback(() => {
+    const s = g.current;
+    const b = s.ball;
+    if (!b.moving || s.gameComplete || s.phase === "results") return;
 
-      const titleSize = Math.max(24, 32 * Math.min(1, scale * 1.2));
-      ctx.font = `bold ${titleSize}px 'Courier New', monospace`;
-      ctx.fillStyle = "#4ade80";
-      ctx.textAlign = "center";
-      ctx.fillText("COURSE COMPLETE!", width / 2, height / 2 - 80 * scale);
+    for (let step = 0; step < STEPS; step++) {
+      if (Math.hypot(b.vx, b.vy) < 0.06) {
+        b.vx = 0; b.vy = 0; b.moving = false;
+        break;
+      }
+      const subVx = b.vx / STEPS, subVy = b.vy / STEPS;
+      b.x += subVx; b.y += subVy;
 
-      const scoreSize = Math.max(18, 24 * Math.min(1, scale * 1.2));
-      ctx.font = `bold ${scoreSize}px 'Courier New', monospace`;
-      ctx.fillStyle = "#fbbf24";
-      ctx.fillText(`SCORE: ${totalScore}`, width / 2, height / 2);
+      // Boundary bounce
+      if (b.x - BALL_R < 0) { b.x = BALL_R; b.vx = -b.vx * 0.6; }
+      if (b.x + BALL_R > W) { b.x = W - BALL_R; b.vx = -b.vx * 0.6; }
+      if (b.y - BALL_R < 0) { b.y = BALL_R; b.vy = -b.vy * 0.6; }
+      if (b.y + BALL_R > H) { b.y = H - BALL_R; b.vy = -b.vy * 0.6; }
 
-      const smallSize = Math.max(12, 16 * Math.min(1, scale * 1.2));
-      ctx.font = `${smallSize}px 'Courier New', monospace`;
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.fillText("TAP TO PLAY AGAIN", width / 2, height / 2 + 60 * scale);
-    }
-  }, [currentHole, holeData, strokes, totalScore, combo, slowMode, showAim, angle, power, gameStarted, gameComplete, scale]);
-
-  // ─── Game Loop ────────────────────────────────────────────────────────────
-
-  const gameLoop = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const ball = ballRef.current;
-
-    // Apply friction with slow mode
-    if (Math.hypot(ball.vx, ball.vy) < 0.1) {
-      ball.vx = 0;
-      ball.vy = 0;
-      ball.isMoving = false;
-    } else {
-      const frictionMod = slowMode ? 0.95 : FRICTION;
-      ball.vx *= frictionMod;
-      ball.vy *= frictionMod;
-
-      // Gravity-like effect
-      ball.vy += 0.1;
-
-      // Update position (in game coordinates)
-      ball.x += ball.vx;
-      ball.y += ball.vy;
-    }
-
-    // Wall collision (in game coordinates)
-    if (ball.x - BALL_RADIUS < 0 || ball.x + BALL_RADIUS > BASE_WIDTH) {
-      ball.vx = -ball.vx * 0.8;
-      ball.x = Math.max(BALL_RADIUS, Math.min(BASE_WIDTH - BALL_RADIUS, ball.x));
-    }
-    if (ball.y - BALL_RADIUS < 0 || ball.y + BALL_RADIUS > BASE_HEIGHT) {
-      ball.vy = -ball.vy * 0.8;
-      ball.y = Math.max(BALL_RADIUS, Math.min(BASE_HEIGHT - BALL_RADIUS, ball.y));
-    }
-
-    // Obstacle collisions
-    holeData.obstacles.forEach((obs) => {
-      if (
-        ball.x + BALL_RADIUS > obs.x &&
-        ball.x - BALL_RADIUS < obs.x + obs.width &&
-        ball.y + BALL_RADIUS > obs.y &&
-        ball.y - BALL_RADIUS < obs.y + obs.height
-      ) {
-        if (obs.type === "water" || obs.type === "spike") {
-          // Reset ball to start
-          ball.x = holeData.ballStartX;
-          ball.y = holeData.ballStartY;
-          ball.vx = 0;
-          ball.vy = 0;
-          setStrokes((prev) => prev + 1);
-          createParticles(holeData.ballStartX, holeData.ballStartY, 
-            obs.type === "water" ? "#0ea5e9" : "#ef4444"
-          );
-        } else if (obs.type === "wall") {
-          // Simple wall bounce
-          const overlapX = Math.min(ball.x + BALL_RADIUS - obs.x, obs.x + obs.width - (ball.x - BALL_RADIUS));
-          const overlapY = Math.min(ball.y + BALL_RADIUS - obs.y, obs.y + obs.height - (ball.y - BALL_RADIUS));
-          
-          if (overlapX < overlapY) {
-            ball.vx = -ball.vx * 0.8;
-            ball.x += (ball.x > obs.x + obs.width / 2) ? overlapX : -overlapX;
-          } else {
-            ball.vy = -ball.vy * 0.8;
-            ball.y += (ball.y > obs.y + obs.height / 2) ? overlapY : -overlapY;
+      // Obstacles
+      const holeDef = HOLES[s.holeIdx];
+      for (const o of holeDef.obstacles) {
+        if (b.x + BALL_R > o.x && b.x - BALL_R < o.x + o.w && b.y + BALL_R > o.y && b.y - BALL_R < o.y + o.h) {
+          if (o.type === "water" || o.type === "spike") {
+            s.strokes++;
+            b.x = holeDef.start.x; b.y = holeDef.start.y; b.vx = 0; b.vy = 0; b.moving = false;
+            rerender();
+            return;
+          } else if (o.type === "wall") {
+            const ox = Math.min(b.x + BALL_R - o.x, o.x + o.w - (b.x - BALL_R));
+            const oy = Math.min(b.y + BALL_R - o.y, o.y + o.h - (b.y - BALL_R));
+            if (ox < oy) { b.vx = -b.vx * 0.6; b.x += (b.x > o.x + o.w / 2) ? ox : -ox; }
+            else { b.vy = -b.vy * 0.6; b.y += (b.y > o.y + o.h / 2) ? oy : -oy; }
           }
         }
       }
-    });
+    }
 
-    // Check if ball is in hole
-    const distToHole = Math.hypot(ball.x - holeData.holeX, ball.y - holeData.holeY);
-    if (distToHole < HOLE_RADIUS + BALL_RADIUS && !ball.isMoving && !gameComplete) {
-      createParticles(holeData.holeX, holeData.holeY, "#22c55e");
-
-      let holeScore = Math.max(0, 10 - (strokes - holeData.par) * 3);
-      if (strokes === 1) {
-        holeScore = 50;
-        unlockAchievement("hole_in_one");
-      } else if (strokes === holeData.par - 1) {
-        holeScore = 30;
-        setCombo((prev) => prev + 1);
-      } else if (strokes === holeData.par) {
-        holeScore = 20;
-        setCombo(0);
-      } else {
-        setCombo(0);
-      }
-
-      setTotalScore((prev) => prev + holeScore);
-
-      if (currentHole < totalHoles - 1) {
-        const nextHole = currentHole + 1;
-        setCurrentHole(nextHole);
-        setStrokes(0);
-        ballRef.current = {
-          x: HOLES[nextHole].ballStartX,
-          y: HOLES[nextHole].ballStartY,
-          vx: 0,
-          vy: 0,
-          isMoving: false,
-        };
-      } else {
-        setGameComplete(true);
-        if (totalScore + holeScore >= 200) {
-          unlockAchievement("perfect_9");
+    // Check hole (only when ball stopped)
+    if (!b.moving && !s.holeInHole) {
+      const holeDef = HOLES[s.holeIdx];
+      if (Math.hypot(b.x - holeDef.hole.x, b.y - holeDef.hole.y) < HOLE_R + BALL_R) {
+        s.holeInHole = true;
+        const hs = Math.max(1, 10 - (s.strokes - holeDef.par) * 2);
+        s.totalScore += hs;
+        if (s.holeIdx < HOLES.length - 1) {
+          s.holeIdx++;
+          s.strokes = 0;
+          b.x = HOLES[s.holeIdx].start.x; b.y = HOLES[s.holeIdx].start.y; b.vx = 0; b.vy = 0; b.moving = false;
+          s.holeInHole = false;
+        } else {
+          s.gameComplete = true;
         }
-        onGameComplete(totalScore + holeScore);
-        return;
+        rerender();
       }
     }
 
-    draw(ctx, width, height);
-    gameLoopRef.current = requestAnimationFrame(gameLoop);
-  }, [draw, holeData, currentHole, strokes, totalScore, combo, slowMode, gameComplete, createParticles, unlockAchievement, onGameComplete]);
+    // Apply friction
+    b.vx *= FRICTION;
+    b.vy *= FRICTION;
+  }, [rerender]);
 
-  // ─── Input Handlers ──────────────────────────────────────────────────────
-
-  const getCanvasCoords = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-
-    const rect = canvas.getBoundingClientRect();
-    let clientX, clientY;
-
-    if ('touches' in e) {
-      const touch = e.touches[0] || e.changedTouches[0];
-      clientX = touch.clientX;
-      clientY = touch.clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    // Convert to game coordinates
-    const x = ((clientX - rect.left) / rect.width) * BASE_WIDTH;
-    const y = ((clientY - rect.top) / rect.height) * BASE_HEIGHT;
-
-    return { x, y };
-  }, []);
-
-  const handleCanvasInteraction = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    
-    if (gameComplete) {
-      // Reset game
-      setGameComplete(false);
-      setCurrentHole(0);
-      setTotalScore(0);
-      setStrokes(0);
-      setCombo(0);
-      setGameStarted(false);
-      setShowAim(false);
-      ballRef.current = {
-        x: HOLES[0].ballStartX,
-        y: HOLES[0].ballStartY,
-        vx: 0,
-        vy: 0,
-        isMoving: false,
-      };
-      return;
-    }
-
-    if (ballRef.current.isMoving) return;
-
-    const { x, y } = getCanvasCoords(e);
-    const ball = ballRef.current;
-
-    if (!gameStarted) {
-      setGameStarted(true);
-      setShowAim(true);
-      setIsAiming(true);
-      const dx = x - ball.x;
-      const dy = y - ball.y;
-      setAngle(Math.atan2(dy, dx));
-      setPower(Math.min(MAX_POWER, Math.max(0, Math.hypot(dx, dy) / 3)));
-      return;
-    }
-
-    const dx = x - ball.x;
-    const dy = y - ball.y;
-    const dist = Math.hypot(dx, dy);
-
-    if (!showAim || dist < 30) {
-      setShowAim(true);
-      setIsAiming(true);
-      setAngle(Math.atan2(dy, dx));
-      setPower(Math.min(MAX_POWER, Math.max(0, dist / 3)));
-    } else {
-      // Shoot
-      ball.vx = Math.cos(angle) * power;
-      ball.vy = Math.sin(angle) * power;
-      ball.isMoving = true;
-      setShowAim(false);
-      setIsAiming(false);
-      setStrokes((prev) => prev + 1);
-      createParticles(ball.x, ball.y, "#fbbf24");
-      setPower(0);
-    }
-  }, [gameStarted, showAim, angle, power, gameComplete, createParticles, getCanvasCoords]);
-
-  const handlePointerMove = useCallback((e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    if (!showAim || ballRef.current.isMoving || gameComplete) return;
-
-    const { x, y } = getCanvasCoords(e);
-    const ball = ballRef.current;
-    const dx = x - ball.x;
-    const dy = y - ball.y;
-
-    setAngle(Math.atan2(dy, dx));
-    setPower(Math.min(MAX_POWER, Math.max(0, Math.hypot(dx, dy) / 3)));
-  }, [showAim, gameComplete, getCanvasCoords]);
-
-  // ─── Lifecycle ────────────────────────────────────────────────────────────
+  // ── Game Loop ────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (gameStarted && !gameComplete) {
-      if (gameLoopRef.current) {
-        cancelAnimationFrame(gameLoopRef.current);
-      }
-      gameLoopRef.current = requestAnimationFrame(gameLoop);
-      return () => {
-        if (gameLoopRef.current) {
-          cancelAnimationFrame(gameLoopRef.current);
-        }
-      };
-    }
-  }, [gameStarted, gameComplete, gameLoop]);
+    const loop = () => {
+      tick();
+      draw();
+      rafRef.current = requestAnimationFrame(loop);
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [tick, draw]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  // ── Input ────────────────────────────────────────────────────────────────
+
+  const getPos = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): Point => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const t = "touches" in e ? (e as TouchEvent).touches[0] || (e as TouchEvent).changedTouches[0] : e as MouseEvent;
+    return {
+      x: ((t.clientX - rect.left) / rect.width) * W,
+      y: ((t.clientY - rect.top) / rect.height) * H,
+    };
+  };
+
+  const onStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const s = g.current;
+    if (s.phase === "results") return;
+    const b = s.ball;
+    if (b.moving) return;
+
+    if (s.showStart) {
+      s.showStart = false; s.phase = "playing"; rerender(); return;
+    }
+    if (s.gameComplete) {
+      s.finalScore = s.totalScore;
+      s.xpEarned = Math.max(100, Math.floor((s.totalScore / 100) * (gameConfig.base_xp ?? 50)));
+      s.phase = "results";
+      rerender();
+      return;
+    }
+
+    const p = getPos(e);
+    const dist = Math.hypot(p.x - b.x, p.y - b.y);
+    if (dist < 60) {
+      s.drag = { active: true, dx: 0, dy: 0 };
+    }
+  }, [gameConfig.base_xp, rerender]);
+
+  const onMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const s = g.current;
+    const b = s.ball;
+    if (!s.drag.active || b.moving) return;
+    const p = getPos(e);
+    s.drag.dx = p.x - b.x;
+    s.drag.dy = p.y - b.y;
+  }, []);
+
+  const onEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    const s = g.current;
+    const b = s.ball;
+    if (!s.drag.active) return;
+    const power = Math.min(MAX_POWER, Math.hypot(s.drag.dx, s.drag.dy) / 8);
+    if (power > 0.5) {
+      const ang = Math.atan2(s.drag.dy, s.drag.dx);
+      b.vx = Math.cos(ang) * power;
+      b.vy = Math.sin(ang) * power;
+      b.moving = true;
+      s.holeInHole = false;
+      s.strokes++;
+      rerender();
+    }
+    s.drag = { active: false, dx: 0, dy: 0 };
+  }, [rerender]);
+
+  const handleClaim = useCallback(() => {
+    onGameComplete(g.current.finalScore);
+  }, [onGameComplete]);
+
+  // Keyboard
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const s = g.current;
+      if (s.showStart && (e.key === " " || e.key === "Enter")) {
+        e.preventDefault(); s.showStart = false; s.phase = "playing"; rerender(); return;
+      }
+      if (s.gameComplete && (e.key === " " || e.key === "Enter")) {
+        e.preventDefault();
+        s.finalScore = s.totalScore;
+        s.xpEarned = Math.max(100, Math.floor((s.totalScore / 100) * (gameConfig.base_xp ?? 50)));
+        s.phase = "results";
+        rerender();
+        return;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [gameConfig.base_xp, rerender]);
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div ref={containerRef} className="flex flex-col items-center gap-4 w-full max-w-[600px] mx-auto px-2">
+    <div className="flex flex-col items-center gap-4 w-full max-w-[600px] mx-auto px-2">
       <div className="relative w-full">
         <canvas
           ref={canvasRef}
-          width={canvasSize.width}
-          height={canvasSize.height}
-          onClick={handleCanvasInteraction}
-          onTouchStart={handleCanvasInteraction}
-          onTouchMove={handlePointerMove}
-          onMouseMove={handlePointerMove}
-          className="w-full rounded-2xl shadow-2xl touch-none cursor-pointer border border-green-400/30 hover:border-green-400/60 transition-all"
-          style={{ 
-            background: "#0f0f1e",
-            maxWidth: '100%',
-            height: 'auto',
-            aspectRatio: `${BASE_WIDTH}/${BASE_HEIGHT}`
-          }}
+          width={W}
+          height={H}
+          onMouseDown={onStart}
+          onMouseMove={onMove}
+          onMouseUp={onEnd}
+          onMouseLeave={onEnd}
+          onTouchStart={onStart}
+          onTouchMove={onMove}
+          onTouchEnd={onEnd}
+          className="w-full rounded-2xl shadow-2xl touch-none cursor-crosshair border border-green-400/30"
+          style={{ maxWidth: "100%", height: "auto", aspectRatio: `${W}/${H}`, background: "#0a1f3f" }}
         />
-
-        {/* Achievement Pop-up */}
-        {showAchievement && (
-          <div className="absolute top-4 left-4 animate-pulse pointer-events-none">
-            <div
-              className="px-4 py-3 rounded-lg border border-green-400/50 backdrop-blur-sm"
-              style={{ background: "rgba(34, 197, 94, 0.1)" }}
-            >
-              <p className="font-mono-arc text-xs text-green-400 font-bold">
-                🏆 ACHIEVEMENT UNLOCKED
-              </p>
-              <p className="font-mono-arc text-[11px] text-green-300">
-                {achievements.find((a) => a.id === showAchievement)?.name}
-              </p>
-            </div>
+        {g.current.phase === "results" && (
+          <div className="absolute inset-0">
+            <XPClaimScreen score={g.current.finalScore} xpEarned={g.current.xpEarned} onClaim={handleClaim} />
           </div>
         )}
       </div>
-
       <div className="text-center w-full">
-        <div className="flex justify-center gap-6 mb-2">
-          <div>
-            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Score</p>
-            <p className="font-mono-arc text-xl font-bold text-cyan-400">{totalScore}</p>
-          </div>
-          <div className="w-px h-10 bg-gray-700"/>
-          <div>
-            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Hole</p>
-            <p className="font-mono-arc text-xl font-bold text-white">{currentHole + 1}/{totalHoles}</p>
-          </div>
-          <div className="w-px h-10 bg-gray-700"/>
-          <div>
-            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Strokes</p>
-            <p className="font-mono-arc text-xl font-bold text-yellow-400">{strokes}</p>
-          </div>
-        </div>
-
-        {/* Achievements */}
-        <div className="flex gap-1 justify-center flex-wrap mb-2">
-          {achievements.map((ach) => (
-            <div
-              key={ach.id}
-              className={`px-1.5 py-0.5 rounded text-[8px] font-mono-arc transition-all ${
-                ach.unlocked
-                  ? "bg-green-500/20 text-green-400 border border-green-400/50"
-                  : "bg-gray-500/10 text-gray-500 border border-gray-500/30"
-              }`}
-            >
-              {ach.unlocked ? "✓" : "○"}
-            </div>
-          ))}
-        </div>
-
-        {gameComplete && (
-          <button
-            onClick={() => {
-              setGameComplete(false);
-              setCurrentHole(0);
-              setTotalScore(0);
-              setStrokes(0);
-              setCombo(0);
-              setGameStarted(false);
-              setShowAim(false);
-              ballRef.current = {
-                x: HOLES[0].ballStartX,
-                y: HOLES[0].ballStartY,
-                vx: 0,
-                vy: 0,
-                isMoving: false,
-              };
-            }}
-            className="font-mono-arc text-xs font-bold uppercase tracking-wider px-6 py-2 rounded-lg transition-all bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black shadow-lg shadow-green-500/25"
-          >
-            Play Again ↻
-          </button>
-        )}
+        <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider mb-1">Total Score</p>
+        <p className="font-mono-arc text-3xl font-bold text-emerald-400 tabular-nums">
+          {g.current.totalScore}
+        </p>
+        <p className="font-mono-arc text-[10px] text-gray-600 mt-1">
+          Hole {g.current.holeIdx + 1}/{HOLES.length} · {g.current.strokes} stroke{g.current.strokes !== 1 ? "s" : ""}
+        </p>
       </div>
     </div>
   );

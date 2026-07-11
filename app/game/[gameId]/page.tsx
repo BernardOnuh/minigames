@@ -17,8 +17,9 @@ import { shortenWallet } from "../../../lib/supabase";
 import FlappyBirdGame from "../../../components/games/FlappyBird";
 import SnakeGame from "../../../components/games/Snake";
 import TriviaGame from "../../../components/games/Trivia";
-import MiniGolfGame from "../../../components/games/MiniGolf";
 import FruitBlitzGame from "../../../components/games/FruitBlitz";
+import TicTacToeGame from "../../../components/games/TicTacToe";
+import BlackjackGame from "../../../components/games/Blackjack";
 
 
 type GamePageProps = {
@@ -29,8 +30,9 @@ const GAME_COMPONENTS: Record<string, React.ComponentType<GameProps>> = {
   flappy_bird: FlappyBirdGame,
   snake: SnakeGame,
   trivia: TriviaGame,
-  mini_golf: MiniGolfGame,
   fruit_blitz: FruitBlitzGame,
+  tic_tac_toe: TicTacToeGame,
+  blackjack: BlackjackGame,
 };
 
 export type GameProps = {

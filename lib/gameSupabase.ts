@@ -38,15 +38,6 @@ export type UserProfile = {
   games_played: number;
 };
 
-export type LeaderboardEntry = {
-  rank: number;
-  wallet: string;
-  username?: string;
-  total_xp: number;
-  games_played: number;
-  avg_xp_per_game: number;
-};
-
 // ─── Game Session Management ───────────────────────────────────────────────
 
 export async function startGameSession(
@@ -166,42 +157,6 @@ export async function fetchUserProfile(wallet: string) {
   return data as UserProfile | null;
 }
 
-// ─── Leaderboard ──────────────────────────────────────────────────────────
-
-/**
- * Get global leaderboard (top players by XP)
- */
-export async function fetchLeaderboard(limit: number = 50) {
-  const { data, error } = await supabase
-    .from("leaderboard")
-    .select("*")
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching leaderboard:", error);
-    return [];
-  }
-
-  return (data || []) as LeaderboardEntry[];
-}
-
-/**
- * Get user's rank on leaderboard
- */
-export async function fetchUserRank(wallet: string) {
-  const { data, error } = await supabase
-    .from("leaderboard")
-    .select("rank")
-    .eq("wallet", wallet)
-    .single();
-
-  if (error && error.code !== "PGRST116") {
-    console.error("Error fetching user rank:", error);
-  }
-
-  return (data?.rank as number) || null;
-}
-
 /**
  * Get game config
  */
@@ -258,25 +213,3 @@ export async function fetchUserGameHistory(wallet: string, limit: number = 10) {
   return (data || []) as GameResult[];
 }
 
-/**
- * Get game-specific leaderboard
- */
-export async function fetchGameLeaderboard(
-  gameId: string,
-  limit: number = 10
-) {
-  const { data, error } = await supabase
-    .from("game_results")
-    .select("wallet, score, xp_earned, created_at")
-    .eq("game_id", gameId)
-    .eq("status", "completed")
-    .order("score", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching game leaderboard:", error);
-    return [];
-  }
-
-  return data || [];
-}

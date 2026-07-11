@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing resultId or score" }, { status: 400 });
       }
 
-      const xpEarned = Math.max(10, Math.floor((score / 1000) * (baseXp || 50)));
+      const xpEarned = Math.max(100, Math.floor((score / 100) * (baseXp || 50)));
 
       const { data, error } = await supabase
         .from("game_results")
