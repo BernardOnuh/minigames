@@ -376,7 +376,7 @@ export default function TriviaGameEnhanced({ gameConfig, onGameComplete, onGameF
             <span className="text-xs font-bold" style={{ color: timeColor }}>{timeLeft}s</span>
           </div>
           <div className="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden border border-purple-400/20 mb-1.5">
-            <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
           <div className="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden border border-green-400/20">
             <div className="h-full bg-green-500 transition-all duration-300" style={{ width: `${timePct}%` }} />
