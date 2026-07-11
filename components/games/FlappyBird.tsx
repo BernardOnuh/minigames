@@ -981,28 +981,29 @@ export default function FlappyBirdGameEnhanced({
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="relative">
+    <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-[500px] mx-auto px-2 sm:px-0">
+      <div className="relative w-full">
         <canvas
           ref={canvasRef}
           width={GAME_WIDTH}
           height={GAME_HEIGHT}
           onClick={handleJump}
-          className="rounded-2xl shadow-2xl cursor-pointer border border-cyan-400/30 hover:border-cyan-400/60 transition-all"
-          style={{ background: "#0f0f1e" }}
+          onTouchStart={(e) => { e.preventDefault(); handleJump(); }}
+          className="rounded-2xl shadow-2xl cursor-pointer border border-cyan-400/30 hover:border-cyan-400/60 transition-all w-full h-auto"
+          style={{ background: "#0f0f1e", maxWidth: "100%", touchAction: "manipulation" }}
         />
         
         {/* Difficulty Selector */}
         {showDifficultySelect && !gameStarted && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6"
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 sm:gap-5 px-4 sm:px-6"
             style={{ background: "rgba(10,6,25,0.95)" }}
           >
-            <div style={{ fontSize: 56 }}>🐦</div>
-            <p className="font-mono-arc text-lg font-bold text-amber-400 uppercase tracking-wider" style={{ textShadow: "0 0 20px rgba(251,191,36,0.4)" }}>
+            <div className="text-4xl sm:text-5xl">🐦</div>
+            <p className="font-mono-arc text-base sm:text-lg font-bold text-amber-400 uppercase tracking-wider text-center" style={{ textShadow: "0 0 20px rgba(251,191,36,0.4)" }}>
               Flappy Bird
             </p>
-            <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em]">Select difficulty</p>
-            <div className="flex gap-3">
+            <p className="font-mono-arc text-[8px] sm:text-[9px] text-gray-500 uppercase tracking-[0.2em]">Select difficulty</p>
+            <div className="flex gap-2 sm:gap-3 w-full px-2 justify-center">
               {(["easy", "medium", "hard"] as Difficulty[]).map((d) => {
                 const config = DIFFICULTY_CONFIGS[d];
                 const selected = difficulty === d;
@@ -1010,9 +1011,9 @@ export default function FlappyBirdGameEnhanced({
                   <button
                     key={d}
                     onClick={() => setDifficulty(d)}
-                    className={`px-5 py-3 rounded-lg font-mono-arc text-xs font-bold uppercase tracking-wider transition-all ${
+                    className={`flex-1 sm:flex-none px-3 sm:px-5 py-3 sm:py-3 rounded-lg font-mono-arc text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all ${
                       selected
-                        ? "scale-110"
+                        ? "scale-105 sm:scale-110"
                         : "opacity-50 hover:opacity-80"
                     }`}
                     style={{
@@ -1036,7 +1037,7 @@ export default function FlappyBirdGameEnhanced({
             </div>
             <button
               onClick={handleJump}
-              className="font-mono-arc text-xs font-bold uppercase tracking-widest px-8 py-3 rounded-lg transition-all hover:opacity-90 active:scale-95 mt-4"
+              className="font-mono-arc text-sm sm:text-xs font-bold uppercase tracking-widest w-[80%] sm:w-auto px-8 py-4 sm:py-3 rounded-lg transition-all hover:opacity-90 active:scale-95 mt-4"
               style={{
                 background: "linear-gradient(135deg,#7c3aed,#a78bfa)",
                 color: "#fff",
@@ -1045,8 +1046,8 @@ export default function FlappyBirdGameEnhanced({
             >
               Start Game →
             </button>
-            <p className="font-mono-arc text-[8px] text-gray-600 mt-2">
-              or press Space
+            <p className="font-mono-arc text-[8px] text-gray-600 mt-1">
+              or tap the screen
             </p>
           </div>
         )}
@@ -1086,30 +1087,30 @@ export default function FlappyBirdGameEnhanced({
         )}
       </div>
 
-      <div className="text-center">
-        <div className="flex gap-6 justify-center items-center mb-4">
-          <div>
-            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Score</p>
-            <p className="font-mono-arc text-2xl font-bold text-cyan-400">{score}</p>
+      <div className="text-center w-full px-2">
+        <div className="flex gap-3 sm:gap-6 justify-center items-center mb-4">
+          <div className="min-w-0">
+            <p className="font-mono-arc text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">Score</p>
+            <p className="font-mono-arc text-xl sm:text-2xl font-bold text-cyan-400">{score}</p>
           </div>
-          <div className="w-px h-8 bg-gray-700"/>
-          <div>
-            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Combo</p>
-            <p className="font-mono-arc text-2xl font-bold text-yellow-400">{combo}x</p>
+          <div className="w-px h-8 bg-gray-700 flex-shrink-0"/>
+          <div className="min-w-0">
+            <p className="font-mono-arc text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">Combo</p>
+            <p className="font-mono-arc text-xl sm:text-2xl font-bold text-yellow-400">{combo}x</p>
           </div>
-          <div className="w-px h-8 bg-gray-700"/>
-          <div>
-            <p className="font-mono-arc text-xs text-gray-500 uppercase tracking-wider">Multiplier</p>
-            <p className="font-mono-arc text-2xl font-bold text-orange-400">x{multiplier}</p>
+          <div className="w-px h-8 bg-gray-700 flex-shrink-0"/>
+          <div className="min-w-0">
+            <p className="font-mono-arc text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">Multiplier</p>
+            <p className="font-mono-arc text-xl sm:text-2xl font-bold text-orange-400">x{multiplier}</p>
           </div>
         </div>
         
         {/* Achievement Display */}
-        <div className="flex gap-2 justify-center flex-wrap mb-3">
+        <div className="flex gap-1.5 justify-center flex-wrap mb-3 max-w-full">
           {achievements.map((ach) => (
             <div
               key={ach.id}
-              className={`px-2 py-1 rounded text-[10px] font-mono-arc transition-all ${
+              className={`px-1.5 sm:px-2 py-1 rounded text-[8px] sm:text-[10px] font-mono-arc transition-all whitespace-nowrap ${
                 ach.unlocked
                   ? "bg-green-500/20 text-green-400 border border-green-400/50 scale-100"
                   : "bg-gray-500/10 text-gray-500 border border-gray-500/30 scale-95 opacity-50"
