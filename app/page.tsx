@@ -1055,7 +1055,7 @@ export default function HomePage() {
               <div className="flex items-center gap-3 mb-3 sm:mb-5">
                 <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Leaderboard</span>
                 <span className="flex-1 h-px bg-white/[0.04]" />
-                <span className="font-mono-arc text-[9px] text-pink-400 border border-pink-500/25 px-2 py-0.5 rounded-sm">Weekly</span>
+                <span className="font-mono-arc text-[9px] text-pink-400 border border-pink-500/25 px-2 py-0.5 rounded-sm">7 days</span>
               </div>
               {loading ? (
                 <div className="space-y-2">
