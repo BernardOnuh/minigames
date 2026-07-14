@@ -145,7 +145,7 @@ function LiveMatchBanner({ match, onJoin }: { match: LiveMatch; onJoin: (id: str
           <style>{`@keyframes live-ping{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
         </div>
         <div className="min-w-0">
-          <p className="font-mono-arc text-[9px] text-red-400 uppercase tracking-[0.18em] mb-0.5">Live now</p>
+          <p className="font-mono-arc text-[9px] text-red-400 uppercase tracking-[0.18em] mb-0.5">Live</p>
           <p className="font-mono-arc text-sm font-bold text-gray-100 truncate">
             {match.gameTitle} · Round {match.round}
           </p>
