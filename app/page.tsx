@@ -819,7 +819,7 @@ export default function HomePage() {
                 onClick={() => router.push("/leaderboard")}
                 className="hidden sm:inline font-mono-arc text-[10px] px-3 py-2 glass-sm rounded-sm text-gray-400 hover:text-gray-100 uppercase tracking-wider transition-all"
               >
-                Leaderboard
+                Rankings
               </button>
 
               {isMiniPay ? (
