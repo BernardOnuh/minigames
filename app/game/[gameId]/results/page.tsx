@@ -90,13 +90,13 @@ export default function GameResultsPage({
                 className="px-4 py-2 border-b border-white/[0.06] flex items-center gap-2"
                 style={{ background: "rgba(255,255,255,0.02)" }}
               >
-                <span className="font-mono-arc text-[9px] text-amber-400 uppercase tracking-[0.2em]">Top scores</span>
+                <span className="font-mono-arc text-[9px] text-amber-400 uppercase tracking-[0.2em]">Best scores</span>
                 <span className="flex-1 h-px bg-white/[0.04]" />
                 <button
                   onClick={() => router.push(`/leaderboard`)}
                   className="font-mono-arc text-[8px] text-gray-600 hover:text-gray-400 uppercase tracking-wider transition-colors"
                 >
-                  Full board →
+                  See all →
                 </button>
               </div>
               {topScores.map((entry, i) => {

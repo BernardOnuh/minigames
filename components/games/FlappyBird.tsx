@@ -39,7 +39,7 @@ const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     jumpStrength: -8.5,
     pipeGap: 160,
     pipeSpacing: 320,
-    baseSpeed: 3.5,
+    baseSpeed: 3.4,
     maxSpeed: 6.5,
     xpMultiplier: 1,
   },

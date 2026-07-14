@@ -49,7 +49,7 @@ const CATEGORIES = [
   {
     id: "politics",
     label: "Global Politics",
-    emoji: "🌍",
+    emoji: "🌏",
     questions: [
       { q: "What is the United Nations?", o: ["A country", "An intl org of nations", "A treaty", "A bank"], c: 1 },
       { q: "Who is the Secretary-General of the UN in 2024?", o: ["António Guterres", "Ban Ki-moon", "Kofi Annan", "Boutros Boutros-Ghali"], c: 0 },

@@ -155,7 +155,7 @@ export default function GamePage({ params }: GamePageProps) {
           onClick={handleQuit}
           className="font-mono-arc text-xs text-violet-400 hover:text-violet-300 uppercase tracking-wider transition-colors"
         >
-          Back to lobby →
+          ← Exit
         </button>
       </main>
     );
@@ -167,13 +167,13 @@ export default function GamePage({ params }: GamePageProps) {
     return (
       <main className="relative min-h-screen w-full flex flex-col items-center justify-center gap-4 bg-black px-4">
         <p className="font-mono-arc text-sm text-red-400 uppercase tracking-wider">
-          Game not implemented yet
+          Coming soon
         </p>
         <button
           onClick={handleQuit}
           className="font-mono-arc text-xs text-violet-400 hover:text-violet-300 uppercase tracking-wider transition-colors"
         >
-          Back to lobby →
+          ← Exit
         </button>
       </main>
     );

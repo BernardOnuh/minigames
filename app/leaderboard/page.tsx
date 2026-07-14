@@ -155,7 +155,7 @@ export default function LeaderboardPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState message="No leaderboard data yet" />
+              <EmptyState message="Empty leaderboard" />
             )
           ) : (
             gameScores.length > 0 ? (
@@ -185,7 +185,7 @@ export default function LeaderboardPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState message="No scores for this game yet" />
+              <EmptyState message="No scores yet" />
             )
           )}
         </div>
