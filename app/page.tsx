@@ -948,7 +948,7 @@ export default function HomePage() {
                   onClick={handleGoToLobby}
                   className="hidden sm:inline font-mono-arc text-xs px-6 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider"
                 >
-                  Browse games
+                  All games
                 </button>
               </div>
             </div>
