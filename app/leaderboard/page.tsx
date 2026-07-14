@@ -104,9 +104,9 @@ export default function LeaderboardPage() {
 
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
-          <p className="font-mono-arc text-[9px] text-violet-400 uppercase tracking-[0.2em] mb-2">Top Players</p>
+          <p className="font-mono-arc text-[9px] text-violet-400 uppercase tracking-[0.2em] mb-2">Leaderboard</p>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Top <span className="text-violet-400">Players</span>
+            <span className="text-violet-400">Leaderboard</span>
           </h1>
         </div>
 
