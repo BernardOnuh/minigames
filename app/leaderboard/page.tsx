@@ -135,7 +135,7 @@ export default function LeaderboardPage() {
           >
             <span className="w-6 flex-shrink-0" />
             <span className="w-8 flex-shrink-0" />
-            <span className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider flex-1">Player</span>
+            <span className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider flex-1">Gamer</span>
             <span className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider flex-shrink-0 text-right w-20">
               {tab === "global" ? "XP" : "Score"}
             </span>
