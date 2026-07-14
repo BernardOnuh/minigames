@@ -56,7 +56,7 @@ function CardView({ card, small }: { card: Card; small?: boolean }) {
       <div className={`rounded-lg flex items-center justify-center font-bold`}
         style={{
           width: small ? 40 : 48, height: small ? 56 : 64,
-          background: "linear-gradient(135deg,#7c3aed,#a78bfa)",
+          background: "linear-gradient(135deg,#6d28d9,#7c3aed)",
           border: "0.5px solid rgba(167,139,250,0.4)",
           borderRadius: 8, fontSize: small ? 14 : 18, color: "#fff",
         }}
