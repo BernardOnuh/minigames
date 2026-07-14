@@ -575,7 +575,7 @@ function HudPanel({
     <div className="glass-card p-3.5 sm:p-4 border-violet-500/15 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
       <p className="font-mono-arc text-[9px] text-cyan-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-        Live stats
+        Stats
         <span className="flex-1 h-px bg-cyan-400/15 inline-block" />
       </p>
 
