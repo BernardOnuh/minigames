@@ -623,7 +623,7 @@ function HudPanel({
               className="font-mono-arc text-[10px] w-full py-2 rounded-sm font-bold uppercase tracking-wider transition-all hover:opacity-90 active:scale-[0.98]"
               style={{ background: "#a78bfa", color: "#000" }}
             >
-              Connect wallet
+              Connect
             </button>
           </>
         )}
@@ -881,7 +881,7 @@ export default function HomePage() {
                   className="font-mono-arc text-[10px] px-3.5 sm:px-4 py-2 rounded-sm font-bold hover:opacity-90 active:scale-[0.98] transition-all uppercase tracking-wider flex items-center gap-1.5"
                   style={{ background: "#a78bfa", color: "#000" }}
                 >
-                  <span>⬡</span> Connect
+                  <span>⬡</span> Login
                 </button>
               )}
             </div>
@@ -904,7 +904,7 @@ export default function HomePage() {
             BLOCK: <span className="text-violet-400">{blockNumber}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
-            SYS OK
+            <span className="text-emerald-400">●</span> OK ████
           </span>
         </div>
 
@@ -917,7 +917,7 @@ export default function HomePage() {
                 MINIGAME PROTOCOL v2.4
               </p>
               <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight mb-3 sm:mb-5">
-                Play mini games.<br />
+                Play to earn.<br />
                 <span className="text-violet-400">Earn crypto.</span>{" "}
                 <span className="text-cyan-400">Own your stats.</span>
               </h1>
@@ -971,7 +971,7 @@ export default function HomePage() {
             {[
               { num: playerCount,        label: "Online",   color: "#c084fc" },
               { num: `${games.length}`,  label: "Games",    color: "#22d3ee" },
-              { num: "Free",             label: "To play",  color: "#4ade80" },
+              { num: "Free",             label: "Play",  color: "#4ade80" },
             ].map((s, i) => (
               <div
                 key={s.label}
@@ -992,7 +992,7 @@ export default function HomePage() {
                 <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Games</span>
                 <span className="flex-1 h-px bg-white/[0.05]" />
                 <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm">
-                  {games.length} active
+                  {games.length} live
                 </span>
               </div>
               <div className="flex gap-1.5 sm:gap-2 overflow-x-auto">
@@ -1102,7 +1102,7 @@ export default function HomePage() {
             onClick={handleConnect}
             className="flex-[1.4] font-mono-arc text-[11px] py-3 rounded-sm bg-violet-500 text-black font-bold uppercase tracking-wider active:scale-[0.98] transition-all"
           >
-            Get started
+            Start playing
           </button>
         )}
       </div>

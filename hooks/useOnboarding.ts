@@ -20,7 +20,7 @@ interface OnboardingOptions {
 // Bumped to v3 — earlier flags reflected onboarding flows that never
 // validated registration succeeded (or registered the faucet, not the
 // player). Stale flags must not short-circuit the corrected flow.
-const LOCAL_KEY = (address: string) => `mg_onboarded_v3_${address.toLowerCase()}`;
+const LOCAL_KEY = (address: string) => `mg_onboarded_v4_${address.toLowerCase()}`;
 
 export function useOnboarding({
   wallet,

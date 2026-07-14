@@ -181,7 +181,7 @@ export async function fetchUserStats(rawWallet: string): Promise<UserStats> {
     xp: Number(data.xp).toLocaleString(),
     earnings: `${Number(data.earnings).toLocaleString()} USDm`,
     winRate: total > 0 ? `${winPct}%` : "—",
-    xpPct: Math.min(100, Math.round((data.xp / 20_000) * 100)),
+    xpPct: Math.min(100, Math.round((data.xp / 25_000) * 100)),
     earningsPct: Math.min(100, Math.round((Number(data.earnings) / 200) * 100)),
     winPct,
   };
@@ -189,7 +189,7 @@ export async function fetchUserStats(rawWallet: string): Promise<UserStats> {
 
 // ─── Lobby chat ───────────────────────────────────────────────────────────────
 
-export async function fetchChatHistory(limit = 30): Promise<ChatMessage[]> {
+export async function fetchChatHistory(limit = 25): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from("lobby_chat")
     .select("id, wallet, username, message, created_at")

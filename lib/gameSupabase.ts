@@ -38,7 +38,7 @@ export type UserProfile = {
   games_played: number;
 };
 
-// ─── Game Session Management ───────────────────────────────────────────────
+// ─── Game Session Management ───────────────────────────────────
 
 export async function startGameSession(
   rawWallet: string,

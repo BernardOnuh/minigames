@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { GameProps } from "../../app/game/[gameId]/page";
 
 const W = 600, H = 400;
-const BALL_R = 6, HOLE_R = 8, FRICTION = 0.965, MAX_POWER = 18;
+const BALL_R = 5, HOLE_R = 7, FRICTION = 0.965, MAX_POWER = 18;
 const STEPS = 3; // sub-steps per frame for reliable collision
 
 type Obstacle = "wall" | "water" | "spike";

@@ -51,13 +51,13 @@ export default function GameResultsPage({
             <div style={{ fontSize: 64 }}>💀</div>
             <p className="font-mono-arc text-2xl font-bold text-red-400 uppercase tracking-wider">Game Over</p>
             <p className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em] text-center">
-              Better luck next time!
+              Give it another shot!
             </p>
           </>
         ) : (
           <>
             <div style={{ fontSize: 64 }}>🏆</div>
-            <p className="font-mono-arc text-2xl font-bold text-amber-400 uppercase tracking-wider">Results</p>
+            <p className="font-mono-arc text-2xl font-bold text-amber-400 uppercase tracking-wider">Final score</p>
 
             <div className="flex gap-8 items-center justify-center">
               <div className="text-center">
@@ -73,7 +73,7 @@ export default function GameResultsPage({
 
             {duration && (
               <p className="font-mono-arc text-[10px] text-gray-600">
-                Duration: {Number(duration)}s
+                Time: {Number(duration)}s
               </p>
             )}
           </>

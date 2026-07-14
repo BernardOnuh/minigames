@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-// Must be NEXT_PUBLIC_ — this runs in the browser, signed by the player's wallet.
+// Must be NEXT_PUBLIC_ — runs in browser, signed by player's wallet.
 export const WAITLIST_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_WAITLIST_CONTRACT_ADDRESS!;
 
 export const WAITLIST_ABI = [
