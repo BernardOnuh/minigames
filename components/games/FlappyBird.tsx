@@ -27,7 +27,7 @@ const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     label: "Easy",
     gravity: 0.25,
     jumpStrength: -9,
-    pipeGap: 200,
+    pipeGap: 195,
     pipeSpacing: 350,
     baseSpeed: 2.5,
     maxSpeed: 4.5,
