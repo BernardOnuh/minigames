@@ -560,7 +560,7 @@ export default function LobbyPage() {
                   }`}
                   style={filter !== f ? { background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.08)" } : {}}
                 >
-                  {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === "all" ? "All Games" : f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
             </div>
