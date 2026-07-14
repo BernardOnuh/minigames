@@ -69,7 +69,7 @@ function XPClaimScreen({ score, xpEarned, onClaim }: {
   useEffect(() => {
     if (!claimed) return;
     let n = 0;
-    const step = Math.ceil(xpEarned / 40);
+    const step = Math.ceil(xpEarned / 35);
     const iv = setInterval(() => {
       n = Math.min(n + step, xpEarned);
       setCounting(n);

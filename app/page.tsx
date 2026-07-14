@@ -895,10 +895,10 @@ export default function HomePage() {
             <span className="hidden xs:inline text-violet-400">{NETWORK_CONFIG.displayName}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap">
-            PLAYERS: <span className="text-violet-400">{playerCount}</span>
+            USERS: <span className="text-violet-400">{playerCount}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap">
-            USDm: <span className="text-violet-400">{usdmPrice}</span>
+            USDM: <span className="text-violet-400">{usdmPrice}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap hidden sm:inline">
             BLOCK: <span className="text-violet-400">{blockNumber}</span>
@@ -1018,13 +1018,13 @@ export default function HomePage() {
               </div>
             ) : gamesError ? (
               <div className="text-center py-10 sm:py-14">
-                <p className="font-mono-arc text-xs text-red-400 mb-1">Couldn&apos;t load games</p>
+                <p className="font-mono-arc text-xs text-red-400 mb-1">Failed to load</p>
                 <p className="font-mono-arc text-[10px] text-gray-600 mb-3">Check that Supabase is reachable and try again.</p>
                 <button
                   onClick={() => window.location.reload()}
                   className="font-mono-arc text-[10px] text-violet-400 uppercase tracking-wider hover:text-violet-300 transition-colors"
                 >
-                  Retry →
+                  Reload →
                 </button>
               </div>
             ) : filteredGames.length > 0 ? (
@@ -1040,7 +1040,7 @@ export default function HomePage() {
                   onClick={() => setFilter("all")}
                   className="font-mono-arc text-[10px] text-violet-400 uppercase tracking-wider hover:text-violet-300 transition-colors"
                 >
-                  Show all →
+                  View all →
                 </button>
               </div>
             )}
@@ -1068,7 +1068,7 @@ export default function HomePage() {
                   <LeaderboardRow key={entry.name} entry={entry} rank={i} />
                 ))
               ) : (
-                <p className="text-center text-gray-500 py-4 text-sm">No leaderboard data available</p>
+                <p className="text-center text-gray-500 py-4 text-sm">No data yet</p>
               )}
             </div>
           </div>

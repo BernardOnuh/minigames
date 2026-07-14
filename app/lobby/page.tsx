@@ -479,7 +479,7 @@ export default function LobbyPage() {
                 mini<span className="text-violet-400">game</span>
               </button>
               <span className="hidden sm:inline font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm uppercase tracking-wider">
-                Lobby
+                Hub
               </span>
             </div>
 
@@ -517,7 +517,7 @@ export default function LobbyPage() {
         >
           <span className="font-mono-arc text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" style={{ boxShadow: "0 0 5px #4ade80" }} />
-            DB: <span className="text-violet-400">ACTIVE</span>
+            DB: <span className="text-violet-400">LIVE</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
             ONLINE: <span className="text-violet-400">{playerCount}</span>
@@ -542,7 +542,7 @@ export default function LobbyPage() {
 
             <div className="flex items-center gap-3 mb-4">
               <span className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
-                Game library
+                Games
               </span>
               <div className="flex-1 h-px bg-white/[0.05]" />
               <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm whitespace-nowrap">
@@ -595,7 +595,7 @@ export default function LobbyPage() {
           {/* ── Sidebar ── */}
           <div className="w-full lg:w-[220px] flex-shrink-0 px-4 sm:px-6 lg:px-4 py-6 flex flex-col gap-4 border-t lg:border-t-0 lg:border-l border-white/[0.05]">
 
-            <SidebarCard title="Your stats" accentColor="#a78bfa">
+            <SidebarCard title="Profile" accentColor="#a78bfa">
               {userStats ? (
                 <>
                   <StatBar label="XP" value={userStats.xp} pct={userStats.xpPct} color="#a78bfa" />
@@ -627,11 +627,11 @@ export default function LobbyPage() {
                   <LeaderboardRow key={entry.name} entry={entry} rank={i} />
                 ))
               ) : (
-                <p className="font-mono-arc text-[9px] text-gray-700 text-center py-2">No data yet</p>
+                <p className="font-mono-arc text-[9px] text-gray-700 text-center py-2">Empty</p>
               )}
             </SidebarCard>
 
-            <SidebarCard title="Lobby chat · live" accentColor="#38bdf8">
+            <SidebarCard title="Live chat" accentColor="#38bdf8">
               <LobbyChat
                 messages={chatMessages}
                 onSend={handleSendChat}
@@ -641,9 +641,9 @@ export default function LobbyPage() {
 
             <div className="flex flex-col gap-2">
               {[
-                { label: "Match history", icon: "⏱", path: "/history" },
-                { label: "Withdraw USDm", icon: "⬡", path: "/wallet" },
-                { label: "Settings", icon: "⚙", path: "/settings" },
+                { label: "History", icon: "⏱", path: "/history" },
+                { label: "Cash out", icon: "⬡", path: "/wallet" },
+                { label: "Config", icon: "⚙", path: "/settings" },
               ].map(({ label, icon, path }) => (
                 <button
                   key={label}
