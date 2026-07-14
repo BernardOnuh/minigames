@@ -307,7 +307,7 @@ export async function fetchGameLeaderboard(
   }));
 }
 
-// ─── Helpers ──────────────────────────────────────────────────
+// ─── Helper ───────────────────────────────────────────────────
 
 export function shortenWallet(address: string): string {
   if (!address || address.length < 10) return address;
