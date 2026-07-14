@@ -139,7 +139,7 @@ export default function GameResultsPage({
               color: "#9ca3af",
             }}
           >
-            Back to Lobby
+            Leave
           </button>
         </div>
       </div>
