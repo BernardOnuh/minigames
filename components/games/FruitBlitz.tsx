@@ -50,7 +50,7 @@ const FRUIT_DATA: Record<FruitType, { emoji: string; color: string; splash: stri
 };
 
 const FRUITS: FruitType[] = ["watermelon", "orange", "strawberry", "banana", "grape", "pineapple"];
-const GRAVITY = 0.018;
+const GRAVITY = 0.019;
 const SLASH_TRAIL_MS = 200;
 const SLASH_RADIUS = 4;
 
