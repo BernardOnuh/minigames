@@ -1053,7 +1053,7 @@ export default function HomePage() {
             <div className="glass-card p-4 sm:p-6 border-pink-500/10 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-pink-500/40 to-transparent" />
               <div className="flex items-center gap-3 mb-3 sm:mb-5">
-                <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Top players</span>
+                <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Leaderboard</span>
                 <span className="flex-1 h-px bg-white/[0.04]" />
                 <span className="font-mono-arc text-[9px] text-pink-400 border border-pink-500/25 px-2 py-0.5 rounded-sm">Weekly</span>
               </div>
