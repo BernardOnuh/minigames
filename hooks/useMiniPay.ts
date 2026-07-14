@@ -6,7 +6,7 @@ export function useMiniPay() {
   const { authenticated, login } = usePrivy();
   const { wallets } = useWallets();
 
-  // Detect MiniPay's injected provider on mount
+  // Detect MiniPay provider on mount
   useEffect(() => {
     const provider = (window as any).ethereum;
     if (provider?.isMiniPay) {
