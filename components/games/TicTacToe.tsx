@@ -146,7 +146,7 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
       });
       setTurn("X");
       setAiThinking(false);
-    }, 400);
+    }, 380);
     return () => clearTimeout(t);
   }, [phase, turn, gameOver, winner]);
 
