@@ -904,7 +904,7 @@ export default function HomePage() {
             BLOCK: <span className="text-violet-400">{blockNumber}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
-            SYS_OK ████ 100%
+            SYS OK
           </span>
         </div>
 
