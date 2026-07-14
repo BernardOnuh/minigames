@@ -989,7 +989,7 @@ export default function HomePage() {
           <div className="max-w-5xl mx-auto">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex items-center gap-3">
-                <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Mini Games</span>
+                <span className="font-mono-arc text-[10px] text-gray-500 uppercase tracking-[0.2em]">Games</span>
                 <span className="flex-1 h-px bg-white/[0.05]" />
                 <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm">
                   {games.length} active
