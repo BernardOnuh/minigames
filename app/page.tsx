@@ -371,7 +371,7 @@ function ConnectModal({
                 color: "#000",
               }}
             >
-              {dripping ? "Please wait…" : "Enter lobby →"}
+              {dripping ? "Please wait…" : "Play now →"}
             </button>
 
             <style>{`@keyframes arc-spin{to{transform:rotate(360deg)}}`}</style>
@@ -934,14 +934,14 @@ export default function HomePage() {
                     onClick={handleGoToLobby}
                     className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
                   >
-                    Enter lobby →
+                    Play now →
                     </button>
                   ) : (
                     <button
                       onClick={handleConnect}
                       className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
                     >
-                      Connect wallet
+                      Sign in
                     </button>
                 )}
                 <button
