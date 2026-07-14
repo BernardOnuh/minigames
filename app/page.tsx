@@ -1088,7 +1088,7 @@ export default function HomePage() {
           onClick={handleGoToLobby}
           className="flex-1 font-mono-arc text-[11px] py-3 rounded-sm glass-sm text-gray-300 uppercase tracking-wider text-center"
         >
-          Explore
+          Browse
         </button>
         {isConnected ? (
           <button
