@@ -9,7 +9,7 @@ const CATEGORIES = [
   {
     id: "blockchains",
     label: "Blockchains",
-    emoji: "⛓️",
+    emoji: "🔗",
     questions: [
       { q: "Who created Ethereum?", o: ["Vitalik Buterin", "Satoshi Nakamoto", "Charles Hoskinson", "Gavin Wood"], c: 0 },
       { q: "What consensus mechanism does Bitcoin use?", o: ["Proof of Stake", "Proof of Work", "DPoS", "PoA"], c: 1 },
