@@ -61,12 +61,12 @@ export default function GameResultsPage({
 
             <div className="flex gap-8 items-center justify-center">
               <div className="text-center">
-                <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">Score</p>
+                <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">Points</p>
                 <p className="font-mono-arc text-4xl font-bold text-white">{Number(score).toLocaleString()}</p>
               </div>
               <div className="w-px h-12 bg-white/10" />
               <div className="text-center">
-                <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">XP Earned</p>
+                <p className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-1">XP Gain</p>
                 <p className="font-mono-arc text-4xl font-bold text-violet-400">+{xp}</p>
               </div>
             </div>

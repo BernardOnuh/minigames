@@ -199,7 +199,7 @@ function GameCard({ game, onPlay }: { game: Game; onPlay: (gameId: string) => vo
           className="font-mono-arc text-[9px] w-full py-1.5 mt-1 rounded transition-all uppercase tracking-wider hover:opacity-90"
           style={{ background: "rgba(167,139,250,0.08)", border: "0.5px solid rgba(167,139,250,0.2)", color: "#a78bfa" }}
         >
-          Play now →
+          Play now
         </button>
       </div>
     </div>
@@ -380,7 +380,7 @@ export default function LobbyPage() {
       setLiveMatch(live);
       setChatMessages([
         ...chat,
-        { id: -1, wallet: "", username: "", message: "You joined the lobby", createdAt: new Date().toISOString(), isSystem: true },
+        { id: -1, wallet: "", username: "", message: "Welcome to the lobby", createdAt: new Date().toISOString(), isSystem: true },
       ]);
       setPlayerCount(players);
 
@@ -546,7 +546,7 @@ export default function LobbyPage() {
               </span>
               <div className="flex-1 h-px bg-white/[0.05]" />
               <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm whitespace-nowrap">
-                {games.length} active
+                {games.length} live
               </span>
             </div>
 
@@ -580,7 +580,7 @@ export default function LobbyPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <p className="font-mono-arc text-[10px] text-gray-600 uppercase tracking-widest">
-                  No games in this category
+                  Nothing here
                 </p>
                 <button
                   onClick={() => setFilter("all")}
@@ -599,12 +599,12 @@ export default function LobbyPage() {
               {userStats ? (
                 <>
                   <StatBar label="XP" value={userStats.xp} pct={userStats.xpPct} color="#a78bfa" />
-                  <StatBar label="USDm balance" value={userStats.earnings} pct={userStats.earningsPct} color="#38bdf8" />
-                  <StatBar label="Win rate" value={userStats.winRate} pct={userStats.winPct} color="#4ade80" />
+                  <StatBar label="USDm" value={userStats.earnings} pct={userStats.earningsPct} color="#38bdf8" />
+                  <StatBar label="Wins" value={userStats.winRate} pct={userStats.winPct} color="#4ade80" />
                 </>
               ) : (
                 <div className="space-y-3">
-                  {["XP", "USDm balance", "Win rate"].map((l) => (
+                  {["XP", "USDm", "Wins"].map((l) => (
                     <div key={l}>
                       <p className="font-mono-arc text-[9px] text-gray-700 uppercase tracking-wider mb-1">{l}</p>
                       <p className="font-mono-arc text-sm font-bold text-gray-700">—</p>
@@ -615,7 +615,7 @@ export default function LobbyPage() {
               )}
             </SidebarCard>
 
-            <SidebarCard title="Top players" accentColor="#f472b6">
+            <SidebarCard title="Leaderboard" accentColor="#f472b6">
               {loading ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (

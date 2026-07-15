@@ -17,10 +17,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           ethereum: {
             createOnLogin: "users-without-wallets",
           },
-          // If you need Solana support, add:
-          // solana: {
-          //   createOnLogin: "users-without-wallets",
-          // },
         },
       }}
     >

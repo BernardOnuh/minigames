@@ -113,11 +113,11 @@ function XPClaimScreen({ score, xpEarned, onClaim }: {
           <div className="font-mono-arc text-3xl font-bold" style={{ color: "#a78bfa", textShadow: "0 0 20px rgba(167,139,250,0.5)" }}>
             +{xpEarned} XP
           </div>
-          <button onClick={() => setClaimed(true)}
+            <button onClick={() => setClaimed(true)}
             className="font-mono-arc text-xs font-bold uppercase tracking-widest px-8 py-3 rounded-lg transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "linear-gradient(135deg,#7c3aed,#a78bfa)", color: "#fff", boxShadow: "0 0 24px rgba(167,139,250,0.3)" }}
+            style={{ background: "#a78bfa", color: "#fff", boxShadow: "0 0 24px rgba(167,139,250,0.3)" }}
           >
-            Claim XP →
+            Claim →
           </button>
         </div>
       ) : (
@@ -145,8 +145,8 @@ export default function BlackjackGame({ gameConfig, onGameComplete }: GameProps)
   const [dealerHand, setDealerHand] = useState<Card[]>([]);
   const [phase, setPhase] = useState<"start" | "playing" | "dealer" | "result" | "results">("start");
   const [result, setResult] = useState<"win" | "lose" | "push" | null>(null);
-  const [bank, setBank] = useState(500);
-  const [bet, setBet] = useState(50);
+  const [bank, setBank] = useState(400);
+  const [bet, setBet] = useState(25);
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [finalScore, setFinalScore] = useState(0);

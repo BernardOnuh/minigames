@@ -94,7 +94,7 @@ export default function LeaderboardPage() {
             onClick={handleBack}
             className="font-mono-arc text-[10px] text-gray-500 hover:text-gray-300 uppercase tracking-wider transition-colors flex items-center gap-1.5"
           >
-            ← Back
+            ← Home
           </button>
           <span className="font-mono-arc text-sm font-bold tracking-widest uppercase">
             mini<span className="text-violet-400">game</span>
@@ -137,7 +137,7 @@ export default function LeaderboardPage() {
             <span className="w-8 flex-shrink-0" />
             <span className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider flex-1">Gamer</span>
             <span className="font-mono-arc text-[9px] text-gray-600 uppercase tracking-wider flex-shrink-0 text-right w-20">
-              {tab === "global" ? "XP" : "Score"}
+              {tab === "global" ? "XP" : "Best"}
             </span>
           </div>
 
@@ -192,10 +192,10 @@ export default function LeaderboardPage() {
 
         <div className="text-center mt-6">
           <button
-            onClick={() => router.push("/lobby")}
+            onClick={() => router.push("/")}
             className="font-mono-arc text-[10px] text-violet-400 hover:text-violet-300 uppercase tracking-wider transition-colors"
           >
-            ← Back to lobby
+            ← Home
           </button>
         </div>
       </div>

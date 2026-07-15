@@ -43,14 +43,14 @@ interface SlashPt {
 const FRUIT_DATA: Record<FruitType, { emoji: string; color: string; splash: string }> = {
   watermelon: { emoji: "🍉", color: "#22c55e", splash: "#ef4444" },
   orange:     { emoji: "🍊", color: "#f97316", splash: "#fbbf24" },
-  strawberry: { emoji: "🍓", color: "#f43f5e", splash: "#fda4af" },
+  strawberry: { emoji: "🍓", color: "#f43f5e", splash: "#fecdd3" },
   banana:     { emoji: "🍌", color: "#eab308", splash: "#fef08a" },
   grape:      { emoji: "🍇", color: "#a855f7", splash: "#c084fc" },
   pineapple:  { emoji: "🍍", color: "#ca8a04", splash: "#fde047" },
 };
 
 const FRUITS: FruitType[] = ["watermelon", "orange", "strawberry", "banana", "grape", "pineapple"];
-const GRAVITY = 0.019;
+const GRAVITY = 0.02;
 const SLASH_TRAIL_MS = 200;
 const SLASH_RADIUS = 4;
 

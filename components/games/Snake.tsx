@@ -14,7 +14,7 @@ type DifficultyConfig = {
   xpMultiplier: number;
 };
 const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
-  easy:   { label: "Easy",   tickMs: 175, pointsPerFood: 10, xpMultiplier: 0.5 },
+  easy:   { label: "Easy",   tickMs: 175, pointsPerFood: 15, xpMultiplier: 0.5 },
   medium: { label: "Medium", tickMs: 120, pointsPerFood: 10, xpMultiplier: 1 },
   hard:   { label: "Hard",   tickMs: 70,  pointsPerFood: 10, xpMultiplier: 1.5 },
 };
@@ -55,12 +55,12 @@ function XPClaimScreen({
   useEffect(() => {
     if (!claimed) return;
     let n = 0;
-    const step = Math.ceil(xpEarned / 40);
+    const step = Math.ceil(xpEarned / 45);
     const iv = setInterval(() => {
       n = Math.min(n + step, xpEarned);
       setCounting(n);
       if (n >= xpEarned) clearInterval(iv);
-    }, 30);
+    }, 25);
     return () => clearInterval(iv);
   }, [claimed, xpEarned]);
 

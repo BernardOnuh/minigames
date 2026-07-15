@@ -561,14 +561,14 @@ function HudPanel({
 
   const stats: HudStat[] = authenticated
     ? [
-        { label: "Your XP",      val: userStats?.xp       ?? "0", color: "#a78bfa", pct: userStats?.xpPct       ?? 0 },
-        { label: "USDm balance", val: userStats?.earnings  ?? "0 USDm", color: "#38bdf8", pct: userStats?.earningsPct ?? 0 },
-        { label: "Win rate",     val: userStats?.winRate   ?? "0%", color: "#4ade80", pct: userStats?.winPct      ?? 0 },
+        { label: "XP",      val: userStats?.xp       ?? "0", color: "#a78bfa", pct: userStats?.xpPct       ?? 0 },
+        { label: "USDm", val: userStats?.earnings  ?? "0 USDm", color: "#38bdf8", pct: userStats?.earningsPct ?? 0 },
+        { label: "Wins",     val: userStats?.winRate   ?? "0%", color: "#4ade80", pct: userStats?.winPct      ?? 0 },
       ]
     : [
-        { label: "Your XP",      val: "0", color: "#374151", pct: 0 },
-        { label: "USDm balance", val: "0 USDm", color: "#374151", pct: 0 },
-        { label: "Win rate",     val: "0%", color: "#374151", pct: 0 },
+        { label: "XP",      val: "0", color: "#374151", pct: 0 },
+        { label: "USDm", val: "0 USDm", color: "#374151", pct: 0 },
+        { label: "Wins",     val: "0%", color: "#374151", pct: 0 },
       ];
 
   return (
@@ -904,7 +904,7 @@ export default function HomePage() {
             BLOCK: <span className="text-violet-400">{blockNumber}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
-            SYS OK
+            <span className="text-emerald-400">●</span> LIVE
           </span>
         </div>
 
@@ -914,7 +914,7 @@ export default function HomePage() {
             <div>
               <p className="font-mono-arc text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-3 sm:mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                MINIGAME PROTOCOL v2.4
+                MINIGAME PROTOCOL — ACTIVE
               </p>
               <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight mb-3 sm:mb-5">
                 Play mini games.<br />
@@ -923,8 +923,8 @@ export default function HomePage() {
               </h1>
               <p className="text-[13px] sm:text-sm text-gray-500 leading-relaxed mb-5 sm:mb-7 max-w-md">
                 {isMiniPay
-                  ? "You're connected to Ethereum Mainnet. Play mini games and earn USDm tokens on every win."
-                  : "Log in with Privy — your wallet is created instantly. Play, compete, and earn USDm on every win."}
+                  ? "Connected to Ethereum Mainnet. Play and earn USDm on every win."
+                  : "Log in with Privy — your wallet is created instantly. Play and earn."}
               </p>
 
               {/* Mobile: one primary CTA. Desktop: primary + secondary. */}

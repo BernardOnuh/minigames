@@ -371,7 +371,7 @@ export default function FlappyBirdGameEnhanced({
       bestComboRef.current = newCombo;
     }
 
-    const newMultiplier = Math.min(Math.floor(newCombo / 4) + 1, 5);
+    const newMultiplier = Math.min(Math.floor(newCombo / 5) + 1, 5);
     setMultiplier(newMultiplier);
 
     if (newCombo > 0 && newCombo % 3 === 0) {

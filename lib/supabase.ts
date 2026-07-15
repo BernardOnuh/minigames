@@ -171,7 +171,7 @@ export async function fetchUserStats(rawWallet: string): Promise<UserStats> {
     .maybeSingle();
 
   if (error || !data) {
-    return { xp: "—", earnings: "— USDm", winRate: "—", xpPct: 0, earningsPct: 0, winPct: 0 };
+    return { xp: "—", earnings: "— USDm", winRate: "—", xpPct: 10, earningsPct: 10, winPct: 0 };
   }
 
   const total = (data.wins ?? 0) + (data.losses ?? 0);

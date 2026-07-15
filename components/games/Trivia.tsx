@@ -12,7 +12,7 @@ const CATEGORIES = [
     emoji: "🔗",
     questions: [
       { q: "Who created Ethereum?", o: ["Vitalik Buterin", "Satoshi Nakamoto", "Charles Hoskinson", "Gavin Wood"], c: 0 },
-      { q: "What consensus mechanism does Bitcoin use?", o: ["Proof of Stake", "Proof of Work", "DPoS", "PoA"], c: 1 },
+      { q: "What consensus does Bitcoin use?", o: ["Proof of Stake", "Proof of Work", "DPoS", "PoA"], c: 1 },
       { q: "Which blockchain introduced smart contracts first?", o: ["Bitcoin", "Ethereum", "Solana", "Cardano"], c: 1 },
       { q: "What is the native token of Solana?", o: ["SOL", "ADA", "DOT", "AVAX"], c: 0 },
       { q: "What does DeFi stand for?", o: ["Decentralized Finance", "Digital Finance", "Decentralized File", "Distributed Finance"], c: 0 },
@@ -198,9 +198,9 @@ export default function TriviaGameEnhanced({ gameConfig, onGameComplete, onGameF
   const [selected, setSelected] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
   const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(20);
+  const [timeLeft, setTimeLeft] = useState(18);
   const [multiplier, setMultiplier] = useState(1);
-  const [powerUps, setPowerUps] = useState(2);
+  const [powerUps, setPowerUps] = useState(3);
   const [hintUsed, setHintUsed] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
