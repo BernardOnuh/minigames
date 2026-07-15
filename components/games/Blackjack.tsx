@@ -146,7 +146,7 @@ export default function BlackjackGame({ gameConfig, onGameComplete }: GameProps)
   const [phase, setPhase] = useState<"start" | "playing" | "dealer" | "result" | "results">("start");
   const [result, setResult] = useState<"win" | "lose" | "push" | null>(null);
   const [bank, setBank] = useState(500);
-  const [bet, setBet] = useState(50);
+  const [bet, setBet] = useState(25);
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [finalScore, setFinalScore] = useState(0);

@@ -44,7 +44,7 @@ const FRUIT_DATA: Record<FruitType, { emoji: string; color: string; splash: stri
   watermelon: { emoji: "🍉", color: "#22c55e", splash: "#ef4444" },
   orange:     { emoji: "🍊", color: "#f97316", splash: "#fbbf24" },
   strawberry: { emoji: "🍓", color: "#f43f5e", splash: "#fda4af" },
-  banana:     { emoji: "🍌", color: "#eab308", splash: "#fef08a" },
+  banana:     { emoji: "🍌", color: "#eab308", splash: "#fde68a" },
   grape:      { emoji: "🍇", color: "#a855f7", splash: "#c084fc" },
   pineapple:  { emoji: "🍍", color: "#ca8a04", splash: "#fde047" },
 };

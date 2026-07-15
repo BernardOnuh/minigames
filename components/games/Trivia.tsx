@@ -29,7 +29,7 @@ const CATEGORIES = [
   {
     id: "worldcups",
     label: "World Cups",
-    emoji: "🏆",
+    emoji: "🏅",
     questions: [
       { q: "Which country won the 2022 FIFA World Cup?", o: ["France", "Brazil", "Argentina", "Germany"], c: 2 },
       { q: "How often is the FIFA World Cup held?", o: ["2 years", "3 years", "4 years", "5 years"], c: 2 },
@@ -69,7 +69,7 @@ const CATEGORIES = [
   {
     id: "inventors",
     label: "Inventors",
-    emoji: "💡",
+    emoji: "💭",
     questions: [
       { q: "Who invented the light bulb?", o: ["Nikola Tesla", "Thomas Edison", "Alexander Bell", "Benjamin Franklin"], c: 1 },
       { q: "Who invented the telephone?", o: ["Thomas Edison", "Nikola Tesla", "Alexander Bell", "Guglielmo Marconi"], c: 2 },

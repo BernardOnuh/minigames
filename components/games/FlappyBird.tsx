@@ -37,7 +37,7 @@ const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
     label: "Medium",
     gravity: 0.35,
     jumpStrength: -8.5,
-    pipeGap: 160,
+    pipeGap: 155,
     pipeSpacing: 320,
     baseSpeed: 3.5,
     maxSpeed: 6.5,

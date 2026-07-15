@@ -187,14 +187,14 @@ function GameCard({ game, onPlay }: { game: Game; onPlay: (gameId: string) => vo
         <span role="img" aria-label={game.title}>{game.icon}</span>
       </div>
       <div className="p-3 flex flex-col gap-2 flex-grow">
-        <p className="font-mono-arc text-[10px] font-bold text-gray-100 uppercase tracking-wider">{game.title}</p>
+                  <span className="font-mono-arc text-[9px] font-bold text-gray-100 uppercase tracking-wider">{game.title}</span>
         <div className="flex items-center justify-between gap-1">
           <span className={`font-mono-arc text-[9px] px-1.5 py-0.5 rounded-sm uppercase tracking-wider ${TAG_STYLES[game.type]}`}>
             {TAG_LABELS[game.type]}
           </span>
           <span className="font-mono-arc text-[9px] text-amber-400">{game.reward}</span>
         </div>
-        <p className="font-mono-arc text-[9px] text-gray-600 mt-auto">{game.players}</p>
+                    <span className="font-mono-arc text-[9px] text-gray-600 mt-auto">{game.players}</span>
         <button
           className="font-mono-arc text-[9px] w-full py-1.5 mt-1 rounded transition-all uppercase tracking-wider hover:opacity-90"
           style={{ background: "rgba(167,139,250,0.08)", border: "0.5px solid rgba(167,139,250,0.2)", color: "#a78bfa" }}
@@ -503,7 +503,7 @@ export default function LobbyPage() {
                   onClick={logout}
                   className="font-mono-arc text-[9px] text-gray-600 hover:text-gray-400 uppercase tracking-wider transition-colors"
                 >
-                  Disconnect
+                  Logout
                 </button>
               )}
             </div>
@@ -520,13 +520,13 @@ export default function LobbyPage() {
             DB: <span className="text-violet-400">ACTIVE</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            ONLINE: <span className="text-violet-400">{playerCount}</span>
+            USERS: <span className="text-violet-400">{playerCount}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            GAMES: <span className="text-violet-400">{games.length}</span>
+            GMS: <span className="text-violet-400">{games.length}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
-            SYS_OK ████ 100%
+            SYS_OK ████
           </span>
         </div>
 
@@ -586,7 +586,7 @@ export default function LobbyPage() {
                   onClick={() => setFilter("all")}
                   className="font-mono-arc text-[9px] text-violet-400 hover:text-violet-300 uppercase tracking-wider transition-colors"
                 >
-                  Show all →
+                  ← Show all
                 </button>
               </div>
             )}
