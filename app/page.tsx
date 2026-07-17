@@ -914,7 +914,7 @@ export default function HomePage() {
             <div>
               <p className="font-mono-arc text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-3 sm:mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                MINIGAME PROTOCOL — ACTIVE
+                MINIGAMES — PLAY TO EARN
               </p>
               <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight mb-3 sm:mb-5">
                 Compete, play & earn.<br />
