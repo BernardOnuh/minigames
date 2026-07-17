@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ result: data });
     }
 
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid action specified" }, { status: 400 });
   } catch (err) {
     console.error("API error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
