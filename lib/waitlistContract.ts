@@ -22,7 +22,7 @@ export async function joinWaitlistOnChain(
   referralCode: string,
 ): Promise<string> {
   if (!WAITLIST_CONTRACT_ADDRESS) {
-    throw new Error("NEXT_PUBLIC_WAITLIST_CONTRACT_ADDRESS is not configured.");
+    throw new Error("Waitlist contract address is missing. Check your environment config.");
   }
 
   const ethereumProvider = await wallet.getEthereumProvider();
