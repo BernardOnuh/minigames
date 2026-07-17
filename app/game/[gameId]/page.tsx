@@ -139,7 +139,7 @@ export default function GamePage({ params }: GamePageProps) {
     return (
       <main className="relative min-h-screen w-full flex items-center justify-center bg-black">
         <p className="font-mono-arc text-xs text-gray-600 uppercase tracking-widest animate-pulse">
-          Starting…
+          Loading game…
         </p>
       </main>
     );

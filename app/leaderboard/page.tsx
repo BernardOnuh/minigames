@@ -106,8 +106,9 @@ export default function LeaderboardPage() {
         <div className="text-center mb-6 sm:mb-8">
           <p className="font-mono-arc text-[9px] text-violet-400 uppercase tracking-[0.2em] mb-2">Leaderboard</p>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            <span className="text-violet-400">Leaderboard</span>
+            <span className="text-violet-400">Rankings</span>
           </h1>
+          <p className="font-mono-arc text-[9px] text-gray-600 mt-1">Top players this week</p>
         </div>
 
         {/* Tabs */}

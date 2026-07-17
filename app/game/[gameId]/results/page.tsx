@@ -128,7 +128,7 @@ export default function GameResultsPage({
               boxShadow: "0 0 24px rgba(167,139,250,0.3)",
             }}
           >
-            Play Again
+            Replay
           </button>
           <button
             onClick={handleBackToLobby}
