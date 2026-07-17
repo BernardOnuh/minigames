@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (action === "start") {
       const { wallet, gameSlug } = body;
       if (!wallet || !gameSlug) {
-        return NextResponse.json({ error: "Missing wallet address or game slug" }, { status: 400 });
+        return NextResponse.json({ error: "Wallet address and game slug are required" }, { status: 400 });
       }
 
       const w = wallet.toLowerCase();
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ result: data });
     }
 
-    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid action specified" }, { status: 400 });
   } catch (err) {
     console.error("API error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
