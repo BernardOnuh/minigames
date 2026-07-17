@@ -1,6 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Providers from "./providers";
+
+export const viewport: Viewport = {
+  themeColor: "#03040a",
+};
 
 export const metadata: Metadata = {
   title: "MINIGAMES - Play games. Earn rewards.",
