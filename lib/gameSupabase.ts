@@ -64,7 +64,7 @@ export async function startGameSession(
 
 /**
  * Complete a game and award XP
- * XP is calculated as: (score / 1000) * base_xp
+ * XP is calculated as: (score / 100) * base_xp
  */
 export async function completeGameResult(
   resultId: number,
