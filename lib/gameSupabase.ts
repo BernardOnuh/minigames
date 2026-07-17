@@ -196,7 +196,7 @@ export async function fetchAllGameConfigs() {
 /**
  * Get user's game history
  */
-export async function fetchUserGameHistory(wallet: string, limit: number = 10) {
+export async function fetchUserGameHistory(wallet: string, limit: number = 20) {
   const { data, error } = await supabase
     .from("game_results")
     .select("*")
