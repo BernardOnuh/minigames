@@ -631,7 +631,7 @@ export default function LobbyPage() {
               )}
             </SidebarCard>
 
-            <SidebarCard title="Lobby chat · live" accentColor="#38bdf8">
+            <SidebarCard title="            Live chat" accentColor="#38bdf8">
               <LobbyChat
                 messages={chatMessages}
                 onSend={handleSendChat}
