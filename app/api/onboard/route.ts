@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     const normalizedWallet = wallet.toLowerCase();
     const email: string = body.email || generateGuestEmail(normalizedWallet);
 
-    console.log(`[onboard] Drip request for wallet: ${normalizedWallet}`);
+    console.log(`[onboard] Processing drip for: ${normalizedWallet}`);
 
     // Idempotency: never drip the same wallet twice, even across retries.
     const { data: existing, error: queryError } = await supabase
