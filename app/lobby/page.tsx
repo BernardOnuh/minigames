@@ -580,7 +580,7 @@ export default function LobbyPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <p className="font-mono-arc text-[10px] text-gray-600 uppercase tracking-widest">
-                  Nothing here
+                  No games match this filter
                 </p>
                 <button
                   onClick={() => setFilter("all")}
