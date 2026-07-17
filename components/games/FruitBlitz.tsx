@@ -133,7 +133,7 @@ export default function FruitBlitzGame({ gameConfig, onGameComplete }: GameProps
     comboTimer: 0,
     frame: 0,
     spawnTimer: 0,
-    spawnInterval: 110,
+    spawnInterval: 105,
     nextId: 0,
     isSlashing: false,
     isGameOver: false,
