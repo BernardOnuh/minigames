@@ -278,8 +278,6 @@ export async function fetchPlayerCount(): Promise<string> {
   return (count ?? 0).toLocaleString();
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 // ─── Game-specific leaderboard ────────────────────────────────────────────
 
 export async function fetchGameLeaderboard(
