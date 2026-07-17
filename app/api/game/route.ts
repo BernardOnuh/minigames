@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (action === "start") {
       const { wallet, gameSlug } = body;
       if (!wallet || !gameSlug) {
-        return NextResponse.json({ error: "Missing wallet or gameSlug" }, { status: 400 });
+        return NextResponse.json({ error: "Missing wallet address or game slug" }, { status: 400 });
       }
 
       const w = wallet.toLowerCase();
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     if (action === "fail") {
       const { resultId } = body;
       if (!resultId) {
-        return NextResponse.json({ error: "Missing resultId" }, { status: 400 });
+        return NextResponse.json({ error: "Missing game result ID" }, { status: 400 });
       }
 
       const { data, error } = await supabase

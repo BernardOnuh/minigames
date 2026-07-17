@@ -14,9 +14,9 @@ const missingVars = Object.entries(requiredEnvVars)
   .filter(([_, val]) => !val)
   .map(([key]) => key);
 
-if (missingVars.length > 0) {
-  console.error("[onboard] ❌ Missing env vars:", missingVars);
-}
+  if (missingVars.length > 0) {
+    console.error("[onboard] Missing env vars:", missingVars);
+  }
 
 const RPC_URL = requiredEnvVars.CELO_RPC_URL || "https://celo.drpc.org";
 const FAUCET_PRIVATE_KEY = requiredEnvVars.FAUCET_PRIVATE_KEY!;
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   try {
     if (missingVars.length > 0) {
       return NextResponse.json(
-        { error: `Server config error: missing ${missingVars.join(", ")}` },
+        { error: `Server configuration is incomplete.` },
         { status: 500 },
       );
     }
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (err: any) {
-    console.error("[onboard] ❌ Fatal error:", err?.message);
+    console.error("[onboard] Fatal error:", err?.message);
     return NextResponse.json(
       {
         success: false,
