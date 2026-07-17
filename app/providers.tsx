@@ -13,6 +13,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           theme: "dark",
           accentColor: "#a78bfa",
           logo: "",
+          walletList: ["detected_wallets", "metamask", "wallet_connect"],
         },
         embeddedWallets: {
           ethereum: {
