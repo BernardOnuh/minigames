@@ -158,9 +158,9 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
       setWinner(w);
       setGameOver(true);
       let pts = 0;
-      if (w === "X") { pts = 50; setResultText("Victory!"); }
-      else if (w === "O") { pts = 10; setResultText("Defeat..."); }
-      else { pts = 25; setResultText("Stalemate!"); }
+      if (w === "X") { pts = 50; setResultText("You win!"); }
+      else if (w === "O") { pts = 10; setResultText("AI wins..."); }
+      else { pts = 25; setResultText("Draw!"); }
       setScore(s => s + pts);
     }
   }, [board, phase]);
@@ -221,7 +221,7 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
           <button onClick={startGame}
             className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-lg hover:from-purple-400 hover:to-pink-400 transition-all text-lg uppercase tracking-widest"
           >
-            Play Now
+            Start
           </button>
         </div>
       )}
@@ -233,7 +233,7 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
           {/* HUD */}
           <div className="flex justify-between items-center mb-6">
             <div className="text-center">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest">Score</p>
+              <p className="text-[9px] text-gray-500 uppercase tracking-widest">Points</p>
               <p className="text-xl font-bold text-purple-400">{score}</p>
             </div>
             <div className="text-center">
@@ -287,18 +287,18 @@ export default function TicTacToeGame({ gameConfig, onGameComplete }: GameProps)
               <button onClick={nextRound}
                 className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-lg hover:from-purple-400 hover:to-pink-400 transition-all uppercase tracking-widest text-sm"
               >
-                Next Round
+                Continue
               </button>
               <button onClick={claimXp}
                 className="w-full py-2 text-xs font-bold rounded-lg uppercase tracking-widest transition-all"
                 style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", color: "#9ca3af" }}
               >
-                Finish & Claim XP
+                Claim
               </button>
             </div>
           ) : (
             <p className="text-center text-[10px] text-gray-600 uppercase tracking-widest">
-              {turn === "X" ? "Your turn" : "AI thinking..."}
+              {turn === "X" ? "Your move" : "AI thinking..."}
             </p>
           )}
         </div>

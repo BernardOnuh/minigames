@@ -25,10 +25,10 @@ type DifficultyConfig = {
 const DIFFICULTY_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   easy: {
     label: "Easy",
-    gravity: 0.25,
+    gravity: 0.22,
     jumpStrength: -9,
     pipeGap: 195,
-    pipeSpacing: 350,
+    pipeSpacing: 280,
     baseSpeed: 2.5,
     maxSpeed: 4.5,
     xpMultiplier: 0.5,
@@ -371,7 +371,7 @@ export default function FlappyBirdGameEnhanced({
       bestComboRef.current = newCombo;
     }
 
-    const newMultiplier = Math.min(Math.floor(newCombo / 4) + 1, 5);
+    const newMultiplier = Math.min(Math.floor(newCombo / 5) + 1, 5);
     setMultiplier(newMultiplier);
 
     if (newCombo > 0 && newCombo % 3 === 0) {

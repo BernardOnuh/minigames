@@ -8,7 +8,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!WAITLIST_CONTRACT_ADDRESS || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("[onboard/confirm] ❌ Missing required env vars");
+  console.error("[onboard/confirm] Missing required env vars");
 }
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const normalizedWallet = wallet.toLowerCase();
     const provider = new ethers.JsonRpcProvider(CELO_RPC_URL);
 
-    console.log(`[onboard/confirm] Verifying ${txHash} for ${normalizedWallet}...`);
+    console.log(`[onboard/confirm] Verifying tx ${txHash.slice(0, 10)}... for ${normalizedWallet}`);
     const receipt = await provider.getTransactionReceipt(txHash);
 
     if (!receipt) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Transaction reverted on-chain." }, { status: 400 });
     }
     if (receipt.to?.toLowerCase() !== WAITLIST_CONTRACT_ADDRESS.toLowerCase()) {
-      return NextResponse.json({ error: "Transaction does not target the waitlist contract." }, { status: 400 });
+      return NextResponse.json({ error: "Transaction does not match the waitlist contract address." }, { status: 400 });
     }
     if (receipt.from.toLowerCase() !== normalizedWallet) {
       return NextResponse.json({ error: "Transaction was not sent by the claimed wallet." }, { status: 400 });

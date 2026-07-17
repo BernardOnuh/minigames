@@ -6,19 +6,13 @@ export function useMiniPay() {
   const { authenticated, login } = usePrivy();
   const { wallets } = useWallets();
 
-  // Detect MiniPay provider on mount
   useEffect(() => {
     const provider = (window as any).ethereum;
-    if (provider?.isMiniPay) {
-      setIsMiniPay(true);
-    }
+    if (provider?.isMiniPay) setIsMiniPay(true);
   }, []);
 
-  // Auto-login via Privy when running inside MiniPay
   useEffect(() => {
-    if (isMiniPay && !authenticated) {
-      login();
-    }
+    if (isMiniPay && !authenticated) login();
   }, [isMiniPay, authenticated, login]);
 
   // Find the wallet Privy picked up from MiniPay's injected provider

@@ -17,9 +17,7 @@ interface OnboardingOptions {
   onError?: (error: string, partial?: { dripTx: string | null }) => void;
 }
 
-// Bumped to v3 — earlier flags reflected onboarding flows that never
-// validated registration succeeded (or registered the faucet, not the
-// player). Stale flags must not short-circuit the corrected flow.
+// v3 — validates registration succeeded with the player's own wallet.
 const LOCAL_KEY = (address: string) => `mg_onboarded_v3_${address.toLowerCase()}`;
 
 export function useOnboarding({
@@ -88,7 +86,6 @@ export function useOnboarding({
         dripAmount: dripData.dripAmount ?? "0",
       });
     } catch (err: any) {
-      // Covers wallet signature rejection, gas estimation failure, RPC errors, etc.
       onError?.(err?.message ?? "Unknown error", { dripTx: dripTxForError });
     } finally {
       inFlight.current = false;

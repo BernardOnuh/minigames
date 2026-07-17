@@ -139,7 +139,7 @@ export default function GamePage({ params }: GamePageProps) {
     return (
       <main className="relative min-h-screen w-full flex items-center justify-center bg-black">
         <p className="font-mono-arc text-xs text-gray-600 uppercase tracking-widest animate-pulse">
-          Starting…
+          Loading game…
         </p>
       </main>
     );
@@ -200,7 +200,7 @@ export default function GamePage({ params }: GamePageProps) {
             className="font-mono-arc text-[9px] text-gray-500 hover:text-gray-300 uppercase tracking-wider transition-colors px-3 py-1.5 rounded"
             style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.08)" }}
           >
-            Quit ✕
+            Exit
           </button>
         </div>
       </div>

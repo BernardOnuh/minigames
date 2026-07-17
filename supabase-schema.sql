@@ -1,4 +1,4 @@
--- Run this in Supabase Dashboard → SQL Editor
+-- Execute in Supabase SQL Editor
 
 -- Games listing table
 CREATE TABLE IF NOT EXISTS games (
