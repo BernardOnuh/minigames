@@ -158,7 +158,7 @@ export default function BlackjackGame({ gameConfig, onGameComplete }: GameProps)
   const playerRef = useRef<Card[]>([]);
 
   const initDeal = useCallback(() => {
-    const d = shuffle(createDeck());
+    const d = shuffle([...createDeck(), ...createDeck(), ...createDeck()]);
     deckRef.current = d;
     playerRef.current = [d.pop()!, d.pop()!];
     dealerRef.current = [d.pop()!, { ...d.pop()!, hidden: true }];
