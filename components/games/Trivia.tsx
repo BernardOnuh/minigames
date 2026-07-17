@@ -198,7 +198,7 @@ export default function TriviaGameEnhanced({ gameConfig, onGameComplete, onGameF
   const [selected, setSelected] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
   const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(18);
+  const [timeLeft, setTimeLeft] = useState(20);
   const [multiplier, setMultiplier] = useState(1);
   const [powerUps, setPowerUps] = useState(3);
   const [hintUsed, setHintUsed] = useState(false);
