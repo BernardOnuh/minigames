@@ -580,7 +580,7 @@ export default function LobbyPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <p className="font-mono-arc text-[10px] text-gray-600 uppercase tracking-widest">
-                  No games in this category
+                  No games match this filter
                 </p>
                 <button
                   onClick={() => setFilter("all")}
@@ -631,7 +631,7 @@ export default function LobbyPage() {
               )}
             </SidebarCard>
 
-            <SidebarCard title="Lobby chat · live" accentColor="#38bdf8">
+            <SidebarCard title="            Live chat" accentColor="#38bdf8">
               <LobbyChat
                 messages={chatMessages}
                 onSend={handleSendChat}
