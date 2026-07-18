@@ -53,6 +53,10 @@
   .font-mono-arc {
     font-family: 'Space Mono', monospace;
   }
+
+  .text-shadow-glow {
+    text-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+  }
 }
 
 ::selection {
