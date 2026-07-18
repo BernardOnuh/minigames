@@ -41,6 +41,12 @@ const config: Config = {
           100: '#fef3c7',
           700: '#b45309',
         },
+        cyan: {
+          50: '#ecfeff',
+          100: '#cffafe',
+          400: '#22d3ee',
+          500: '#06b6d4',
+        },
       },
     },
   },

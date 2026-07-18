@@ -454,7 +454,7 @@ export default function LobbyPage() {
       <main className="relative min-h-screen w-full flex items-center justify-center">
         <LiquidBackground />
         <p className="font-mono-arc text-xs text-gray-600 relative z-10 uppercase tracking-widest animate-pulse">
-          Loading lobby…
+          Entering lobby…
         </p>
       </main>
     );
@@ -526,7 +526,7 @@ export default function LobbyPage() {
             GAMES: <span className="text-violet-400">{games.length}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
-            SYS_OK ████ 100%
+            ALL SYSTEMS NOMINAL
           </span>
         </div>
 
@@ -542,7 +542,7 @@ export default function LobbyPage() {
 
             <div className="flex items-center gap-3 mb-4">
               <span className="font-mono-arc text-[9px] text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
-                Game library
+                All games
               </span>
               <div className="flex-1 h-px bg-white/[0.05]" />
               <span className="font-mono-arc text-[9px] text-violet-400 border border-violet-500/25 px-2 py-0.5 rounded-sm whitespace-nowrap">
