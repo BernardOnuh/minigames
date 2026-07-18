@@ -96,7 +96,7 @@ export async function fetchGames(): Promise<Game[]> {
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
-export async function fetchLeaderboard(limit = 5): Promise<LeaderboardEntry[]> {
+export async function fetchLeaderboard(limit = 10): Promise<LeaderboardEntry[]> {
   const { data, error } = await supabase
     .from("leaderboard_weekly")
     .select("wallet, username, xp, earnings, avatar_color, avatar_text")
@@ -277,8 +277,6 @@ export async function fetchPlayerCount(): Promise<string> {
   if (error) return "—";
   return (count ?? 0).toLocaleString();
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // ─── Game-specific leaderboard ────────────────────────────────────────────
 

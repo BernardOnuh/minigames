@@ -64,7 +64,7 @@ export async function startGameSession(
 
 /**
  * Complete a game and award XP
- * XP is calculated as: (score / 1000) * base_xp
+ * XP is calculated as: (score / 100) * base_xp
  */
 export async function completeGameResult(
   resultId: number,
@@ -196,7 +196,7 @@ export async function fetchAllGameConfigs() {
 /**
  * Get user's game history
  */
-export async function fetchUserGameHistory(wallet: string, limit: number = 10) {
+export async function fetchUserGameHistory(wallet: string, limit: number = 20) {
   const { data, error } = await supabase
     .from("game_results")
     .select("*")

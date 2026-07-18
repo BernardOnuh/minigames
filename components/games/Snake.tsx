@@ -14,7 +14,7 @@ type DifficultyConfig = {
   xpMultiplier: number;
 };
 const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
-  easy:   { label: "Easy",   tickMs: 175, pointsPerFood: 10, xpMultiplier: 0.5 },
+  easy:   { label: "Easy",   tickMs: 165, pointsPerFood: 15, xpMultiplier: 0.5 },
   medium: { label: "Medium", tickMs: 120, pointsPerFood: 10, xpMultiplier: 1 },
   hard:   { label: "Hard",   tickMs: 70,  pointsPerFood: 10, xpMultiplier: 1.5 },
 };

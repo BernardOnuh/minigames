@@ -914,17 +914,17 @@ export default function HomePage() {
             <div>
               <p className="font-mono-arc text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-[0.2em] mb-3 sm:mb-4 flex items-center gap-3">
                 <span className="w-7 h-px bg-cyan-400/50 inline-block" />
-                MINIGAME PROTOCOL v2.4
+                MINIGAMES — PLAY TO EARN
               </p>
               <h1 className="text-3xl sm:text-5xl font-black leading-[1.1] tracking-tight mb-3 sm:mb-5">
-                Play mini games.<br />
-                <span className="text-violet-400">Earn crypto.</span>{" "}
-                <span className="text-cyan-400">Own your stats.</span>
+                Compete, play & earn.<br />
+                <span className="text-violet-400">On-chain rewards.</span>{" "}
+                <span className="text-cyan-400">Real-time stats.</span>
               </h1>
               <p className="text-[13px] sm:text-sm text-gray-500 leading-relaxed mb-5 sm:mb-7 max-w-md">
                 {isMiniPay
-                  ? "You're connected to Ethereum Mainnet. Play mini games and earn USDm tokens on every win."
-                  : "Log in with Privy — your wallet is created instantly. Play, compete, and earn USDm on every win."}
+                  ? "Connected to Ethereum Mainnet. Compete and earn USDm."
+                  : "Log in with Privy — instant wallet. Play and earn rewards."}
               </p>
 
               {/* Mobile: one primary CTA. Desktop: primary + secondary. */}
