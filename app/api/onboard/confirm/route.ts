@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const normalizedWallet = wallet.toLowerCase();
     const provider = new ethers.JsonRpcProvider(CELO_RPC_URL);
 
-    console.log(`[onboard/confirm] Verifying ${txHash} for ${normalizedWallet}...`);
+    console.log(`[onboard/confirm] Verifying tx ${txHash.slice(0, 10)}... for ${normalizedWallet}`);
     const receipt = await provider.getTransactionReceipt(txHash);
 
     if (!receipt) {
