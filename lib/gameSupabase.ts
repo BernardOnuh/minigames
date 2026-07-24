@@ -7,18 +7,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Type definitions
 export type GameResult = {
-    id?: number;
-    wallet: string;
-    game_id: string;
-    score: number;
-    xp_earned: number;
-    duration_seconds: number;
-    status: "playing" | "completed" | "failed" | "abandoned";
-    metadata?: Record<string, any>;
-    created_at: string;
-    updated_at?: string;
-  };
-
+  id?: number;
+  wallet: string;
+  game_id: string;
+  score: number;
+  xp_earned: number;
+  duration_seconds: number;
+  status: "playing" | "completed" | "failed" | "abandoned";
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at?: string;
+};
 
 export type GameConfig = {
   id?: number;
