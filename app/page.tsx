@@ -44,8 +44,8 @@ const NETWORK_CONFIG = {
 // ─── API Services ─────────────────────────────────────────────────────────────
 // Games, leaderboard, player stats, and player count now come from lib/supabase
 // (the same source the lobby page uses) instead of the old api.minigame.com
-// placeholder backend. Only price/block data — which have nothing to do with
-// Supabase — stay as direct fetches here.
+// placeholder backend. Only price/block data (unrelated to Supabase) stay as
+// direct fetches here.
 
 async function fetchUSDmPrice(): Promise<string> {
   try {
@@ -935,8 +935,8 @@ export default function HomePage() {
                     className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
                   >
                     Play now →
-                    </button>
-                  ) : (
+                  </button>
+                ) : (
                     <button
                       onClick={handleConnect}
                       className="font-mono-arc text-xs px-6 py-3 rounded-sm bg-violet-500 text-black font-bold hover:bg-violet-400 active:scale-[0.98] transition-all uppercase tracking-wider"
@@ -948,7 +948,7 @@ export default function HomePage() {
                   onClick={handleGoToLobby}
                   className="hidden sm:inline font-mono-arc text-xs px-6 py-3 rounded-sm glass-sm text-gray-300 hover:text-gray-100 transition-all uppercase tracking-wider"
                 >
-                  All games
+                  All Games
                 </button>
               </div>
             </div>
