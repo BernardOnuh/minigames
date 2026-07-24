@@ -898,10 +898,10 @@ export default function HomePage() {
             PLAYERS: <span className="text-violet-400">{playerCount}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap">
-            USDm: <span className="text-violet-400">{usdmPrice}</span>
+            USDm: <span className="text-emerald-400">{usdmPrice}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-500 whitespace-nowrap hidden sm:inline">
-            BLOCK: <span className="text-violet-400">{blockNumber}</span>
+            BLOCK: <span className="text-cyan-400">{blockNumber}</span>
           </span>
           <span className="font-mono-arc text-[9px] sm:text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
             SYS OK

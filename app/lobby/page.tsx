@@ -517,13 +517,13 @@ export default function LobbyPage() {
         >
           <span className="font-mono-arc text-[10px] text-gray-500 flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" style={{ boxShadow: "0 0 5px #4ade80" }} />
-            NET: <span className="text-violet-400">LIVE</span>
+            NET: <span className="text-emerald-400">LIVE</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
             ONLINE: <span className="text-violet-400">{playerCount}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-500 whitespace-nowrap">
-            GAMES: <span className="text-violet-400">{games.length}</span>
+            GAMES: <span className="text-cyan-400">{games.length}</span>
           </span>
           <span className="font-mono-arc text-[10px] text-gray-600 ml-auto whitespace-nowrap tracking-widest">
             ALL SYSTEMS NOMINAL
@@ -631,7 +631,7 @@ export default function LobbyPage() {
               )}
             </SidebarCard>
 
-            <SidebarCard title="            Live chat" accentColor="#38bdf8">
+            <SidebarCard title="Live chat" accentColor="#38bdf8">
               <LobbyChat
                 messages={chatMessages}
                 onSend={handleSendChat}

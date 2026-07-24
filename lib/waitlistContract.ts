@@ -11,14 +11,13 @@ interface SignableWallet {
   getEthereumProvider: () => Promise<any>;
 }
 
-// Calls joinWaitlist using the PLAYER's own wallet as signer, so msg.sender
+// Calls joinWaitlist using the player's own wallet as signer so msg.sender
 // on-chain is the player — not the faucet. Works for Privy embedded wallets,
-// external wallets, and MiniPay's injected wallet, since all three expose
-// getEthereumProvider().
+// external wallets, and MiniPay's injected wallet (all expose getEthereumProvider).
 export async function joinWaitlistOnChain(
   wallet: SignableWallet,
   email: string,
-  referralCode: string,
+  referralCode: string
 ): Promise<string> {
   if (!WAITLIST_CONTRACT_ADDRESS) {
     throw new Error("Waitlist contract address is missing. Check your environment config.");
