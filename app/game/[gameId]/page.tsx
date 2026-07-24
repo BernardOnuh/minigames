@@ -21,7 +21,6 @@ import FruitBlitzGame from "../../../components/games/FruitBlitz";
 import TicTacToeGame from "../../../components/games/TicTacToe";
 import BlackjackGame from "../../../components/games/Blackjack";
 
-
 type GamePageProps = {
   params: Promise<{ gameId: string }>;
 };
